@@ -13,7 +13,6 @@ CREATE TABLE CourseCatalogue(
     -- PRIMARY KEY(courseID)
 );
 
-
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
     preReqCourseID INTEGER NOT NULL,
@@ -80,13 +79,31 @@ CREATE TABLE Teaches(
     FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
-
 -- (viswanath, cs301, 1(key), 5th, 2021, pcm1)
 -- sectionID_1 (studentID, courseGrade)
 -- facultyGradeTable_{sectionID}
 
+/* 
+A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0
+*/
 CREATE TABLE GradeMapping(
     grade VARCHAR(2) NOT NULL,
     val   INTEGER   NOT NULL,
     PRIMARY KEY(grade)
+);
+
+/* @Dynamic Table */
+CREATE TABLE FacultyGradeTable_{sectionID}(
+    studentID integer not null,
+    grade VARCHAR(2),
+);
+
+/* @Dynamic Table */
+CREATE TABLE Transcript_{studentID}(
+    courseID INTEGER NOT NULL, 
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    grade VARCHAR(2),
+    PRIMARY KEY(courseID, semester, year),
+    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
 );

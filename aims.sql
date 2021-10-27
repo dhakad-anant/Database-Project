@@ -22,58 +22,6 @@ Doubt: What would be the primary key for this table? */
 
 
 
-/* 
-A = 10
-A- = 9 
-B = 8
-B- = 7
-C = 6
-C- = 5
-F = 0
-*/
-CREATE TABLE GradeMapping(
-    grade VARCHAR(2) NOT NULL,
-    val   INTEGER   NOT NULL,
-    PRIMARY KEY(grade)
-);
-
-/* ******************************TRIGGER 1 - generate_transcript_table*********************************************************************************************/
-CREATE TRIGGER generate_transcript_table
-after insert on Student 
-For each STATEMENT 
-EXECUTE PROCEDURE generate_transcript_table_trigger_function(studentID);
-
-CREATE or replace FUNCTION generate_transcript_table_trigger_function(studentID INTEGER)
-    returns TRIGGER
-    language plpgsql
-as $$
-declare
-    -- variable declaration
-    tableName   text;
-    query       text;
-begin
-    -- stored procedure body
-    tableName := 'Transcript_' || studentID::text;
-    query := 'CREATE Table ' || tableName;
-    query := query || '
-        (
-            courseID VARCHAR(10) NOT NULL,
-            semester INTEGER NOT NULL,
-            year INTEGER NOT NULL,
-            grade VARCHAR(2),
-            PRIMARY KEY(courseID, semester, year),
-            FOREIGN KEY(courseID, semester, year) REFERENCES CourseCatalogue(courseID, semester, year)
-        );';
-    
-    EXECUTE query; -- transcript table created
-
-    return new;
-    -- handle permissions
-    -- student(read only), dean(read & write), 
-end; $$;   
-/* ******************************************************************************************** TRIGGER 1 - generate_transcript_table ends ******************************************************************************************** */
-
-
 /* ******************************TRIGGER 2 - Compute the current CGPA of any student*********************************************************************************************/
 create or replace procedure calculate_current_CGPA(IN INT studentID)
     language plpgsql    

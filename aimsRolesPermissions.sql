@@ -19,3 +19,10 @@ TO Faculty;
 GRANT INSERT, UPDATE, DELETE
 ON Teaches 
 TO Faculty, DeanAcademicsOffice;
+
+GRANT SELECT
+ON CourseOffering 
+TO Faculty; 
+
+
+
