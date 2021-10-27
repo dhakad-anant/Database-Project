@@ -35,8 +35,8 @@ CREATE TABLE Instructor(
 
 CREATE TABLE TimeSlot(
     timeSlotID INTEGER NOT NULL,
-    duration integer NOT NULL, -- in minutes
     slotName varchar(20) not null,
+    duration integer NOT NULL, -- in minutes
 
     monday varchar(20) not null,
     tuesday varchar(20) not null,
@@ -95,7 +95,7 @@ CREATE TABLE GradeMapping(
 /* @Dynamic Table */
 CREATE TABLE FacultyGradeTable_{sectionID}(
     studentID integer not null,
-    grade VARCHAR(2),
+    grade VARCHAR(2)
 );
 
 /* @Dynamic Table */
