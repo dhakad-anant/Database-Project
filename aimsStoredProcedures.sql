@@ -91,8 +91,10 @@ begin
     -- check if there is a clash timeslot 
 
     -- check course cgpa requirement
-    
-end; $$;    
+
+end; $$; 
+
+
 /* 
 -- getting student info 
 select * into studentInfo from student where student.studentID = studentID;
