@@ -6,7 +6,7 @@ CREATE TABLE CourseCatalogue(
     T INTEGER NOT NULL,
     P INTEGER NOT NULL,
     S INTEGER NOT NULL,
-    C INTEGER NOT NULL
+    C Numeric(4,2) NOT NULL
     -- semester INTEGER NOT NULL,
     -- year INTEGER NOT NULL,
     -- PRIMARY KEY(courseID, semester, year)

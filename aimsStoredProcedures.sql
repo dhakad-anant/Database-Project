@@ -82,15 +82,70 @@ create or replace procedure RegisterStudent(
 language plpgsql
 as $$
 declare
-
+    tableName text;
+    prevCredit Numeric(4,2)r;
+    prevPrevCredit Numeric(4,2)r;
+    averageCredits Numeric(10,2);
+    maxCreditsAllowed Numeric(10,2);
+    currentCredit Numeric(4,2);
+    courseCredit Numeric(4,2);
+    
 begin
+    prevPrevCredit:=-1
+    prevCredit:=-1
+
+    select sum(C) into currentCredit
+    from tableName, CourseCatalogue
+    where tableName.courseID=CourseCatalogue.courseID and tableName.semester=_semester;
+
+    -- Credit of the course that we are currently enrolling in
+    select C into courseCredit
+    from CourseCatalogue
+    where CourseCatalogue.courseId=_courseID;
+
+    currentCredit:=currentCredit+ courseCredit;
+
+    
     -- check 1.25 rule
 
+    
+    tableName:= 'Transcript_' || _studentID::text;
+
+    
+    select sum(C) into prevCredit
+    from tableName, CourseCatalogue
+    where tableName.courseID=CourseCatalogue.courseID and tableName.semester=_semester-1;
+
+    select sum(C) into prevPrevCredit
+    from tableName, CourseCatalogue
+    where tableName.courseID=CourseCatalogue.courseID and tableName.semester=_semester-2;
+
+    if prevCredit=-1 then
+        maxCreditsAllowed:=18        
+    else if prevPrevCredit =-1 then
+        maxCreditsAllowed:=18.5
+    else 
+        averageCredits:= (prevCredit + prevPrevCredit)/2;
+        maxCreditsAllowed:= averageCredits*1.25;
+    end if;
+
+    if currentCredit> maxCreditsAllowed then 
+        raise notice  'Credit Limit Reached!';
+        return;
+
+    end if;
+
+
+
     -- check if he/she fullfills all preReqs 
+
+
 
     -- check if there is a clash timeslot 
 
     -- check course cgpa requirement
+
+
 
 end; $$; 
 
