@@ -129,13 +129,20 @@ order by schema_name,
 
 
 /* IMPORTANT Dynamic query**************************************************************************************************************************************************************************************** */
-do $$
+create or replace procedure fixusing(
+    sortType INTEGER,
+    recCount INTEGER
+)
+language plpgsql
+as $$
 declare
-    sort_type   smallint := 2;
-    rec_count   integer := 10;
+    sort_type   smallint;
+    rec_count   integer;
     rec         record;
     query       text;
 begin 
+    sort_type := sortType;
+    rec_count := recCount;
     query := 'select * from course ';
     
     if sort_type = 1 then 

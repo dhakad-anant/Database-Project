@@ -62,6 +62,22 @@ begin
     
     EXECUTE query; -- transcript table created
 
+
+
+    tableName := 'Transcript_' || studentID::text;
+    query := 'CREATE Table ' || tableName;
+    query := query || '
+        (
+            courseID INTEGER NOT NULL,
+            semester INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            grade VARCHAR(2),
+            PRIMARY KEY(courseID, semester, year),
+            FOREIGN KEY(courseID, semester, year) REFERENCES CourseOffering(courseID, semester, year)
+        );';
+    
+    EXECUTE query; -- transcript table created
+
     return new;
     -- handle permissions
     -- student(read only), dean(read & write), 
@@ -70,4 +86,23 @@ end; $$;
 
 
 
+
+CREATE TRIGGER InsertInFacultyTicketTable
+after insert on Student 
+For each STATEMENT 
+EXECUTE PROCEDURE InsertInFacultyTicketTable_trigger_function(
+    
+);
+
+create or replace function InsertInFacultyTicketTable_trigger_function(
+    
+)
+    return return_type 
+    language plpgsql
+as $$
+declare
+    --variable declaration
+begin 
+    --logic
+end; $$;
 

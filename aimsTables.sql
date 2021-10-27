@@ -6,7 +6,7 @@ CREATE TABLE CourseCatalogue(
     T INTEGER NOT NULL,
     P INTEGER NOT NULL,
     S INTEGER NOT NULL,
-    C INTEGER NOT NULL
+    C Numeric(4,2) NOT NULL
     -- semester INTEGER NOT NULL,
     -- year INTEGER NOT NULL,
     -- PRIMARY KEY(courseID, semester, year)
@@ -35,8 +35,8 @@ CREATE TABLE Instructor(
 
 CREATE TABLE TimeSlot(
     timeSlotID INTEGER NOT NULL,
-    duration integer NOT NULL, -- in minutes
     slotName varchar(20) not null,
+    duration integer NOT NULL, -- in minutes
 
     monday varchar(20) not null,
     tuesday varchar(20) not null,
@@ -79,22 +79,17 @@ CREATE TABLE Teaches(
     FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
-
-/* 
-A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0
-*/
+/* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
 CREATE TABLE GradeMapping(
     grade VARCHAR(2) NOT NULL,
     val   INTEGER   NOT NULL,
     PRIMARY KEY(grade)
 );
-
 /* @Dynamic Table */
 CREATE TABLE FacultyGradeTable_{sectionID}(
     studentID integer not null,
-    grade VARCHAR(2),
+    grade VARCHAR(2)
 );
-
 /* @Dynamic Table */
 CREATE TABLE Transcript_{studentID}(
     courseID INTEGER NOT NULL, 
@@ -103,4 +98,43 @@ CREATE TABLE Transcript_{studentID}(
     grade VARCHAR(2),
     PRIMARY KEY(courseID, semester, year),
     FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
+);
+/* @Dynamic Table */
+CREATE TABLE StudentTicketTable_{studentID}(
+    insID INTEGER NOT NULL,
+    courseID INTEGER NOT NULL,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    timeSlotID INTEGER NOT NULL,
+    ticketID SERIAL, 
+    facultyVerdict BOOLEAN,
+    batchAdvisorVerdict BOOLEAN,
+    deanAcademicsOfficeTicketTableVerdict BOOLEAN,
+    PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
+);
+/* @Dynamic Table */
+CREATE TABLE FacultyTicketTable_{insID}(
+    studentID INTEGER NOT NULL,
+    studentTicketID INTEGER NOT NULL,
+    facultyVerdict BOOLEAN,
+    BatchAdvisorVerdict BOOLEAN,
+    DeanAcademicsOfficeVerdict BOOLEAN,
+    PRIMARY KEY(studentID, studentTicketID)
+);
+/* @Dynamic Table */
+CREATE TABLE BatchAdvisorTicketTable_{insID}(
+    studentID INTEGER NOT NULL,
+    studentTicketID INTEGER NOT NULL,
+    facultyVerdict BOOLEAN,
+    BatchAdvisorVerdict BOOLEAN,
+    DeanAcademicsOfficeVerdict BOOLEAN,
+    PRIMARY KEY(studentID, studentTicketID)
+);
+CREATE TABLE DeanAcademicsOfficeTicketTable(
+    studentID INTEGER NOT NULL,
+    studentTicketID INTEGER NOT NULL,
+    facultyVerdict BOOLEAN,
+    BatchAdvisorVerdict BOOLEAN,
+    DeanAcademicsOfficeVerdict BOOLEAN,
+    PRIMARY KEY(studentID, studentTicketID)
 );
