@@ -138,11 +138,7 @@ C = 6
 C- = 5
 F = 0
 */
-CREATE TABLE GradeMapping(
-    grade VARCHAR(2) NOT NULL,
-    val   INTEGER   NOT NULL,
-    PRIMARY KEY(grade)
-);
+
 
 /* ******************************TRIGGER 1 - generate_transcript_table*********************************************************************************************/
 CREATE TRIGGER generate_transcript_table
@@ -277,9 +273,7 @@ declare
     tmp text;
 begin
     pradeep := 'anant';
-    -- query := 'CREATE table somename(
-    --     x integer not null
-    -- );';
+    
     query := 'CREATE table ';
     query := query || pradeep;
     tmp := '(

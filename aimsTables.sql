@@ -6,12 +6,13 @@ CREATE TABLE CourseCatalogue(
     T INTEGER NOT NULL,
     P INTEGER NOT NULL,
     S INTEGER NOT NULL,
-    C INTEGER NOT NULL,
+    C INTEGER NOT NULL
     -- semester INTEGER NOT NULL,
     -- year INTEGER NOT NULL,
     -- PRIMARY KEY(courseID, semester, year)
     -- PRIMARY KEY(courseID)
 );
+
 
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
@@ -28,7 +29,64 @@ CREATE TABLE Department(
 
 CREATE TABLE Instructor(
     insID SERIAL PRIMARY KEY,
+    insName VARCHAR(50) NOT NULL,
     deptID INTEGER not NULL,
-    -- PRIMARY KEY(insID),
     FOREIGN key(deptID) REFERENCES Department(deptID), 
+);
+
+CREATE TABLE TimeSlot(
+    timeSlotID INTEGER NOT NULL,
+    duration integer NOT NULL, -- in minutes
+    slotName varchar(20) not null,
+
+    monday varchar(20) not null,
+    tuesday varchar(20) not null,
+    wednesday varchar(20) not null,
+    thursday varchar(20) not null,
+    friday varchar(20) not null,
+    
+    PRIMARY KEY(timeSlotID, slotName)
+);
+
+CREATE TABLE CourseOffering(
+    courseID INTEGER NOT NULL,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    cgpaRequired NUMERIC(4, 2),
+    PRIMARY KEY(courseID,semester,year),
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID),
+);
+
+CREATE TABLE Student(
+    -- studentID INTEGER NOT NULL,
+    studentID serial PRIMARY KEY,
+    batch INTEGER NOT NULL,
+    deptID INTEGER not NULL,
+    entryNumber varchar(30) not null,
+    Name VARCHAR(50) NOT NULL,
+    -- PRIMARY KEY(studentID),
+    FOREIGN key(deptID) REFERENCES Department(deptID) 
+);
+
+CREATE TABLE Teaches(
+    insID INTEGER NOT NULL,
+    courseID INTEGER NOT NULL,
+    sectionID SERIAL,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    timeSlotID INTEGER NOT NULL,
+    PRIMARY KEY(insID,courseID,semester,year,timeSlotID),
+    FOREIGN KEY(insID) REFERENCES Instructor(insID),
+    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
+    FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
+);  
+
+-- (viswanath, cs301, 1(key), 5th, 2021, pcm1)
+-- sectionID_1 (studentID, courseGrade)
+-- facultyGradeTable_{sectionID}
+
+CREATE TABLE GradeMapping(
+    grade VARCHAR(2) NOT NULL,
+    val   INTEGER   NOT NULL,
+    PRIMARY KEY(grade)
 );

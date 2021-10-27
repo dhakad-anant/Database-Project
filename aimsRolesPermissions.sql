@@ -11,14 +11,11 @@ CREATE ROLE Faculty;
 CREATE ROLE BatchAdvisor;
 CREATE ROLE DeanAcademicsOffice;
 
-REVOKE ALL 
-ON PROCEDURE transfer 
-FROM joe;
 
-REVOKE ALL 
-ON accounts
-FROM joe;
+GRANT INSERT
+ON Teaches 
+TO Faculty;
 
-Grant UPDATE 
-ON accounts
-to joe;
+GRANT INSERT, UPDATE, DELETE
+ON Teaches 
+TO Faculty, DeanAcademicsOffice;
