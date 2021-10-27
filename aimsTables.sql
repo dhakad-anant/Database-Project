@@ -79,9 +79,6 @@ CREATE TABLE Teaches(
     FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
--- (viswanath, cs301, 1(key), 5th, 2021, pcm1)
--- sectionID_1 (studentID, courseGrade)
--- facultyGradeTable_{sectionID}
 
 /* 
 A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0

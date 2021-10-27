@@ -91,7 +91,7 @@ begin
     -- check if there is a clash timeslot 
 
     -- check course cgpa requirement
-
+    
 end; $$; 
 
 
