@@ -149,21 +149,21 @@ CREATE TABLE BatchAdvisor_{deptID}(
 );
 
 create Table UGCurriculum(
-    curriculumId SERIAL PRIMARY KEY,
+    curriculumID SERIAL PRIMARY KEY,
     batch INTEGER NOT NULL,
     deptID INTEGER NOT NULL,
     FOREIGN KEY(deptID) REFERENCES Department(deptID)
 );
 
 -- @Dynamic Table
-create table CurriculumList_{curriculumId}(
+create table CurriculumList_{curriculumID}(
     courseCategory VARCHAR(20) NOT NULL,
     courseID integer not null,
     FOREIGN key(courseId) REFERENCES CourseCatalogue(courseID)
 );
 
 -- @Dynamic Table
-create table CurriculumRequirements_{curriculumId}(
+create table CurriculumRequirements_{curriculumID}(
     numCreditsProgramCores INTEGER NOT NULL,
     numCreditsProgramElectives INTEGER NOT NULL,
     numCreditsScienceCores INTEGER NOT NULL,
