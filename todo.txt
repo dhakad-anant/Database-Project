@@ -5,3 +5,9 @@
 4. update time slot table, add not null to slotName, days can be NULL instead of not NULL
 5. add unique to the entryNumber attribute of the student table
         add name to the student table
+6. implement printGradeSheet stored procedure
+7. implement triggers for ticket propogation
+8. implement the stored procedure uploadCourseGrades
+8. implement the stored procedure canGraduate
+9. correct the notion of batch advisor (if time permits) but this would contradict the doc
+10. see the permissions aspect for this code
