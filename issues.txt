@@ -1,1 +1,1 @@
-1. how is batch advisor recognized (banaya hi salon!)
+1. add dynamic table for ug curriculum list in postinsertdepartment trigger
