@@ -17,7 +17,7 @@ CREATE TABLE PreRequisite(
 
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
-    deptName VARCHAR(20) not null
+    deptName VARCHAR(20) NOT NULL UNIQUE
 );
 
 CREATE TABLE Instructor(
