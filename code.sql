@@ -26,31 +26,7 @@ CREATE TABLE TimeSlot(
 );
 
 
-/* ******************************TRIGGER 2 - uploading_time-table slots*********************************************************************************************/
-create or replace procedure upload_timetable_slots()
-language plpgsql
-as $$
-declare
-    filepath    text;
-    query    text;
-begin
-    filepath := '''C:\fordbmsproject\filename.csv''';
-    -- query := '
-    --     COPY persons(first_name, last_name, dob, email)
-    --     FROM 'C:\sampledb\persons.csv'
-    --     DELIMITER ','
-    --     CSV HEADER;
-    -- ';
 
-    query := 'COPY TimeSlot(timeSlotID, slotName, duration, monday, tuesday, wednesday, thursday, friday) 
-              FROM ' || filepath || 
-              ' DELIMITER '','' 
-              CSV HEADER;';
-    EXECUTE QUERY;
-end; $$;
-
--- call upload_timetable_slots();
-/* ******************************************************************************************** TRIGGER 1 - uploading_time-table slots ends ******************************************************************************************** */
 
 
 -- -- Refer to PreRequisite Table to access the list of PreRequisite

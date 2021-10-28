@@ -6,9 +6,16 @@
 /* *Major Stakeholders*
     -- now other roles can simply inherit all privileges from these major stakeholders.
 */
+
 CREATE ROLE Students;
+
+
 CREATE ROLE Faculty;
+
+
 CREATE ROLE BatchAdvisor;
+
+
 CREATE ROLE DeanAcademicsOffice;
 
 
