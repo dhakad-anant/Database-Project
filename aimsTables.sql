@@ -41,14 +41,22 @@ CREATE TABLE TimeSlot(
     PRIMARY KEY(timeSlotID)
 );
 
-CREATE TABLE CourseOffering(
-    courseID INTEGER NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    cgpaRequired NUMERIC(4, 2),
-    PRIMARY KEY(courseID,semester,year),
-    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
-);
+    CREATE TABLE CourseOffering(
+        courseOfferingID SERIAL,
+        courseID INTEGER NOT NULL,
+        semester INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        cgpaRequired NUMERIC(4, 2),
+        PRIMARY KEY(courseID,semester,year),
+        FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+    );
+
+    create table BatchesAllowed(
+        CourseOfferingID INTEGER NOT NULL,
+        Batch INTEGER NOT NULL,
+        FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID)
+    );
+
 
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
@@ -150,8 +158,8 @@ create Table UGCurriculum(
 -- @Dynamic Table
 create table CurriculumList_{curriculumId}(
     courseCategory VARCHAR(20) NOT NULL,
-    courseId integer not null
-    FOREIGN key(courseId) REFERENCES CourseCatalogue
+    courseID integer not null,
+    FOREIGN key(courseId) REFERENCES CourseCatalogue(courseID)
 );
 
 -- @Dynamic Table
