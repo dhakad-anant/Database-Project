@@ -2,3 +2,5 @@
 2. add 2 stored procedure for viewing and adding courses to the CourseCatalogue table
         name of the procedure: viewCourseCatalog and updateCourseCatalog
 3. make the deptName unique in the department table 
+  git config --global user.email "pradee3008k@gmai.com"
+  git config --global user.name "pradee3008k"
