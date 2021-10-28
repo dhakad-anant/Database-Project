@@ -159,7 +159,7 @@ create Table UGCurriculum(
 create table CurriculumList_{curriculumID}(
     courseCategory VARCHAR(20) NOT NULL,
     courseID integer not null,
-    FOREIGN key(courseId) REFERENCES CourseCatalogue(courseID)
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
 -- @Dynamic Table
