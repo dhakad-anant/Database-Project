@@ -1,3 +1,6 @@
+CREATE DATABASE aims;
+
+DROP TABLE IF EXISTS CourseCatalogue;
 CREATE TABLE CourseCatalogue(
     courseID SERIAL PRIMARY KEY,
     courseCode VARCHAR(10) NOT NULL,
@@ -8,6 +11,7 @@ CREATE TABLE CourseCatalogue(
     C Numeric(4,2) NOT NULL
 );
 
+DROP TABLE IF EXISTS PreRequisite;
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
     preReqCourseID INTEGER NOT NULL,
@@ -15,11 +19,13 @@ CREATE TABLE PreRequisite(
     FOREIGN KEY(preReqCourseID) REFERENCES CourseCatalogue(courseID) ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
     deptName VARCHAR(20) not null
 );
 
+DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
     insID SERIAL PRIMARY KEY,
     insName VARCHAR(50) NOT NULL,
@@ -27,6 +33,7 @@ CREATE TABLE Instructor(
     FOREIGN key(deptID) REFERENCES Department(deptID)
 );
 
+DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
     timeSlotID INTEGER NOT NULL,
     slotName varchar(20) UNIQUE,
@@ -41,6 +48,7 @@ CREATE TABLE TimeSlot(
     PRIMARY KEY(timeSlotID)
 );
 
+DROP TABLE IF EXISTS CourseOffering;
 CREATE TABLE CourseOffering(
     courseID INTEGER NOT NULL,
     semester INTEGER NOT NULL,
@@ -50,6 +58,7 @@ CREATE TABLE CourseOffering(
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
+DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
     batch INTEGER NOT NULL,
@@ -59,6 +68,7 @@ CREATE TABLE Student(
     FOREIGN key(deptID) REFERENCES Department(deptID) 
 );
 
+DROP TABLE IF EXISTS Teaches;
 CREATE TABLE Teaches(
     insID INTEGER NOT NULL,
     courseID INTEGER NOT NULL,
@@ -73,57 +83,23 @@ CREATE TABLE Teaches(
 );  
 
 /* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
+DROP TABLE IF EXISTS GradeMapping;
 CREATE TABLE GradeMapping(
     grade VARCHAR(2) NOT NULL,
     val   INTEGER   NOT NULL,
     PRIMARY KEY(grade)
 );
+/* INSERTING GradeMapping ROWS */
+INSERT INTO GradeMapping(grade, val)
+    values('A', 10),
+          ('B', 9),
+          ('C', 8),
+          ('D', 7),
+          ('E', 6),
+          ('F', 5);
+/**/
 
-/* @Dynamic Table */
-CREATE TABLE FacultyGradeTable_{sectionID}(
-    studentID integer not null,
-    grade VARCHAR(2)
-);
-/* @Dynamic Table */
-CREATE TABLE Transcript_{studentID}(
-    courseID INTEGER NOT NULL, 
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    grade VARCHAR(2),
-    PRIMARY KEY(courseID, semester, year),
-    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
-);
-/* @Dynamic Table */
-CREATE TABLE StudentTicketTable_{studentID}(
-    insID INTEGER NOT NULL,
-    courseID INTEGER NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    timeSlotID INTEGER NOT NULL,
-    ticketID SERIAL, 
-    facultyVerdict BOOLEAN,
-    batchAdvisorVerdict BOOLEAN,
-    deanAcademicsOfficeTicketTableVerdict BOOLEAN,
-    PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
-);
-/* @Dynamic Table */
-CREATE TABLE FacultyTicketTable_{insID}(
-    studentID INTEGER NOT NULL,
-    studentTicketID INTEGER NOT NULL,
-    facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
-    PRIMARY KEY(studentID, studentTicketID)
-);
-/* @Dynamic Table */
-CREATE TABLE BatchAdvisorTicketTable_{deptID}(
-    studentID INTEGER NOT NULL,
-    studentTicketID INTEGER NOT NULL,
-    facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
-    PRIMARY KEY(studentID, studentTicketID)
-);
+DROP TABLE IF EXISTS DeanAcademicsOfficeTicketTable;
 CREATE TABLE DeanAcademicsOfficeTicketTable(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
@@ -132,9 +108,6 @@ CREATE TABLE DeanAcademicsOfficeTicketTable(
     DeanAcademicsOfficeVerdict BOOLEAN,
     PRIMARY KEY(studentID, studentTicketID)
 );
-/* @Dynamic Table */
-CREATE TABLE BatchAdvisor_{deptID}(
-    insID INTEGER,
-    deptID INTEGER NOT NULL,
-    PRIMARY KEY(deptID)
-);
+
+
+

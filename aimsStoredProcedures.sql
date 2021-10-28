@@ -87,12 +87,13 @@ language plpgsql
 as $$
 declare 
     studentTrancriptTableName text;
-    prevCredit Numeric(4,2)r;
-    prevPrevCredit Numeric(4,2)r;
-    averageCredits Numeric(10,2);
-    maxCreditsAllowed Numeric(10,2);
-    currentCredit Numeric(4,2);
-    courseCredit Numeric(4,2);
+    facultyGradeTableName text;
+    prevCredit NUMERIC(4,2);
+    prevPrevCredit NUMERIC(4,2);
+    averageCredits NUMERIC(10,2);
+    maxCreditsAllowed NUMERIC(10,2);
+    currentCredit NUMERIC(4,2);
+    courseCredit NUMERIC(4,2);
     totalPreRequisite INTEGER;
     totalPreRequisiteSatisfied INTEGER;
     clash INTEGER;
@@ -105,6 +106,7 @@ declare
     cgpaRequired NUMERIC(4,2);
     _courseID INTEGER;
     query text;
+    _sectionID INTEGER;
 begin
     -- Computing the Course Id
     _courseID := -1
@@ -166,66 +168,85 @@ begin
 
 
     prevPrevCredit:=-1
-    SELECT sum(CourseCatalogue.C) INTO prevPrevCredit
-    from studentTrancriptTableName, CourseCatalogue
-    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and studentTrancriptTableName.semester=_semester and studentTrancriptTableName.year = _year -1;
+    query = 'SELECT sum(CourseCatalogue.C)
+            from ' || studentTrancriptTableName || ', CourseCatalogue
+            where ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            and '||studentTrancriptTableName||'.year = $1 and '||studentTrancriptTableName||'.semester = $2';
 
-    if prevCredit=-1 then
-        maxCreditsAllowed:=18        
-    else if prevPrevCredit =-1 then
-        maxCreditsAllowed:=18.5
+    for prevPrevCredit in EXECUTE query using _year - 1, _semester  loop 
+        break;
+    end loop;
+
+    if prevCredit = -1 then
+        maxCreditsAllowed := 18        
+    else if prevPrevCredit = -1 then
+        maxCreditsAllowed := 18.5
     else 
-        averageCredits:= (prevCredit + prevPrevCredit)/2;
-        maxCreditsAllowed:= averageCredits*1.25;
+        averageCredits := (prevCredit + prevPrevCredit)/2;
+        maxCreditsAllowed := averageCredits * 1.25;
     end if;
 
-    if currentCredit> maxCreditsAllowed then 
-        raise notice  'Credit Limit Reached!';
+    if currentCredit > maxCreditsAllowed then 
+        raise notice  'Credit Limit Exceeding !!!';
         return;
     end if;
 
 
-
     -- check if he/she fullfills all preReqs 
-
     SELECT count(*) INTO totalPreRequisite
     from PreRequisite
-    where PreRequisite.courseId=_courseID;
+    where PreRequisite.courseId = _courseID;
 
-    SELECT count(*) INTO totalPreRequisiteSatisfied
-    from studentTrancriptTableName, PreRequisite
-    where PreRequisite.courseID=_courseID and PreRequisite.preReqCourseID =studentTrancriptTableName.courseId and grade<>'F' and grade <> NULL and studentTrancriptTableName.semester<>_semester and studentTrancriptTableName.year<>_year;
+    query = 'SELECT count(*)
+            from ' || studentTrancriptTableName || ', PreRequisite
+            where PreRequisite.courseID = $1 
+            and PreRequisite.preReqCourseID = ' ||studentTrancriptTableName||'.courseId 
+            and grade<>'F' and grade <> NULL 
+            and '||studentTrancriptTableName||'.semester <> $2 
+            and '||studentTrancriptTableName||'.year <> $3';
 
-    if totalPreRequisite<>totalPreRequisiteSatisfied then
+    for totalPreRequisiteSatisfied in EXECUTE query using _courseID, _semester, _year loop 
+        break;
+    end loop;
+
+    if totalPreRequisite <> totalPreRequisiteSatisfied then
         raise notice 'All PreRequisite not Satisfied!'
         return;
     end if;
 
-    -- check if there is a clash timeslot 
+ 
 
     -- If time slot exists or not
-    _timeSlotID:=-1;
+    _timeSlotID := -1;
     select TimeSlot.timeSlotID into _timeSlotID 
     from TimeSlot
-    where TimeSlot.slotName=_slotName;
-
+    where TimeSlot.slotName = _slotName;
     if _timeSlotID = -1 then
-        raise notice 'Time SLot does not exist'
+        raise notice 'Entered Time SLot does not exist !!!'
         return;
     end if;
+    -- Checking for clashes in timeSlot    
+    query = 'SELECT count(*)
+            from ' || studentTrancriptTableName || ', Teaches
+            where '||studentTrancriptTableName||'.courseID = Teaches.courseID 
+            and '||studentTrancriptTableName||'.year = Teaches.year 
+            and '||studentTrancriptTableName||'.semester = Teaches.semester 
+            and '||studentTrancriptTableName||'.semester = $1 
+            and '||studentTrancriptTableName||'.year = $2
+            and teaches.insID = $3 
+            and teaches.timeSlotID= $4';
 
-    -- Checking for clashes in timeSlot
-    select count(*) into totalClashes
-    from studentTrancriptTableName, Teaches
-    where studentTrancriptTableName.courseID = Teaches.courseID and studentTrancriptTableName.year= Teaches.year and studentTrancriptTableName.semester=teaches.semester and studentTrancriptTableName.semester=_semester and studentTrancriptTableName.year= _year and teaches.insID=_insId and teaches.timeSlotID= _timeSlotID;
-
-    if totalClashes<>0 then 
+    for totalClashes in EXECUTE query using _semester, _year, _insId, _timeSlotID loop 
+        break;
+    end loop;
+    
+    if totalClashes <> 0 then 
         raise notice 'Course with same time slot already enrolled in this semester'
         return;
     end if;
 
-    -- check course cgpa requirement
 
+    -- check course cgpa requirement
     -- call function to calculate Current CGPA
     -- declare this function above this one
     -- currentCGPA:= calculate_current_CGPA(_studentID);
@@ -238,6 +259,21 @@ begin
         return;
     end if;
     
+    /* All checks completed */
+    SELECT sectionID into _sectionID
+    from Teaches
+    where Teaches.studentID = _studentID 
+        and Teaches.courseID = _courseID 
+        and Teaches.semester = _semester 
+        and Teaches.year = _year 
+        and Teaches.insID = _insId 
+        and Teaches.timeSlotID = _timeSlotID;
+
+    facultyGradeTableName := 'FacultyGradeTable_' || _sectionID::text;
+
+    query := 'INSERT INTO ' || facultyGradeTableName ||'(studentID,grade) VALUES ('||_studentID||', NULL)';
+
+    EXECUTE query;
 
 end; $$; 
 /* ----------------------------------------------------------- */
