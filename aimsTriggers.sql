@@ -31,12 +31,12 @@ end; $$;
 /* ********************************************************************** */
 
 /* TRIGGER - generate_transcript_table****************************************************/
-CREATE TRIGGER generate_transcript_table
+CREATE TRIGGER student
 after insert on Student 
 For each STATEMENT 
-EXECUTE PROCEDURE generate_transcript_table_trigger_function(studentID);
+EXECUTE PROCEDURE student_trigger_function(studentID);
 
-CREATE or replace FUNCTION generate_transcript_table_trigger_function(
+CREATE or replace FUNCTION student_trigger_function(
     IN studentID INTEGER
 )
     returns TRIGGER
@@ -105,4 +105,6 @@ declare
 begin 
     --logic
 end; $$;
+
+
 

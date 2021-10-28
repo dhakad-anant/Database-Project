@@ -86,7 +86,7 @@ create or replace procedure RegisterStudent(
 language plpgsql
 as $$
 declare
-    tableName text;
+    studentTrancriptTableName text;
     prevCredit Numeric(4,2)r;
     prevPrevCredit Numeric(4,2)r;
     averageCredits Numeric(10,2);
@@ -128,10 +128,11 @@ begin
         return;
     end if;
 
+    studentTrancriptTableName:= 'Transcript_' || _studentID::text;
 
     SELECT sum(CourseCatalogue.C) INTO currentCredit
-    from tableName, CourseCatalogue
-    where tableName.courseID=CourseCatalogue.courseID and tableName.semester=_semester;
+    from studentTrancriptTableName, CourseCatalogue
+    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and studentTrancriptTableName.semester=_semester;
 
     -- Credit of the course that we are currently enrolling in
     SELECT CourseCatalogue.C INTO courseCredit
@@ -141,22 +142,21 @@ begin
     currentCredit:=currentCredit+ courseCredit;
 
     -- check 1.25 rule
-    tableName:= 'Transcript_' || _studentID::text;
 
     prevCredit:=-1
     SELECT sum(CourseCatalogue.C) INTO prevCredit
-    from tableName, CourseCatalogue
-    where tableName.courseID=CourseCatalogue.courseID and
+    from studentTrancriptTableName, CourseCatalogue
+    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and
      (
-        (tableName.year = _year - 1 and tableName.semester = 2 and _semester = 1)
+        (studentTrancriptTableName.year = _year - 1 and studentTrancriptTableName.semester = 2 and _semester = 1)
                                     OR 
-        (tableName.year = _year and tableName.semester = 1 and _semester = 2) 
+        (studentTrancriptTableName.year = _year and studentTrancriptTableName.semester = 1 and _semester = 2) 
     );
 
     prevPrevCredit:=-1
     SELECT sum(CourseCatalogue.C) INTO prevPrevCredit
-    from tableName, CourseCatalogue
-    where tableName.courseID=CourseCatalogue.courseID and tableName.semester=_semester and tableName.year = _year -1;
+    from studentTrancriptTableName, CourseCatalogue
+    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and studentTrancriptTableName.semester=_semester and studentTrancriptTableName.year = _year -1;
 
     if prevCredit=-1 then
         maxCreditsAllowed:=18        
@@ -181,8 +181,8 @@ begin
     where PreRequisite.courseId=_courseID;
 
     SELECT count(*) INTO totalPreRequisiteSatisfied
-    from tableName, PreRequisite
-    where PreRequisite.courseID=_courseID and PreRequisite.preReqCourseID =tableName.courseId and grade<>'F' and grade <> NULL and tableName.semester<>_semester and tableName.year<>_year;
+    from studentTrancriptTableName, PreRequisite
+    where PreRequisite.courseID=_courseID and PreRequisite.preReqCourseID =studentTrancriptTableName.courseId and grade<>'F' and grade <> NULL and studentTrancriptTableName.semester<>_semester and studentTrancriptTableName.year<>_year;
 
     if totalPreRequisite<>totalPreRequisiteSatisfied then
         raise notice 'All PreRequisite not Satisfied!'
@@ -204,9 +204,9 @@ begin
 
     -- Checking for clashes in timeSlot
     select count(*) into totalClashes
-    from tableName, Teaches
-    where tableName.courseID = Teaches.courseID and tableName.year= Teaches.year and tableName.semester=teaches.semester and tableName.semester=_semester and tableName.year= _year and teaches.insID=_insId and teaches.timeSlotID= _timeSlotID;
-    
+    from studentTrancriptTableName, Teaches
+    where studentTrancriptTableName.courseID = Teaches.courseID and studentTrancriptTableName.year= Teaches.year and studentTrancriptTableName.semester=teaches.semester and studentTrancriptTableName.semester=_semester and studentTrancriptTableName.year= _year and teaches.insID=_insId and teaches.timeSlotID= _timeSlotID;
+
     if totalClashes<>0 then 
         raise notice 'Course with same time slot already enrolled in this semester'
         return;
@@ -225,40 +225,12 @@ begin
         raise notice 'CGPA Criteria not Satisfied!'
         return;
     end if;
-
+    
 end; $$; 
 /* ----------------------------------------------------------- */
 
-/* 
--- getting student info 
-select * into studentInfo from student where student.studentID = studentID;
-
-If semester-2 >= 0 then
-select sum(credit) into prevprevCredit
-from Btech
-where Btech.semester = semester -2;
-Else 
-	// write assumption
-	Prevprev = 18;
-End if ;
-
-select sum(credit) into prevCredit
-from Btech
-where Btech.semester = semester -1;
-
-select sum(credit) into currentCredit
-from Btech
-where Btech.semester = semester;
-
-currentCredit := currentCredit + courseCredit;
-
-if currentCredit > 1.25/2 * (prevprevCredit + prevCredit) then
-	raise error ‘Credit limit exceeded bro! Bs kr’;
-*/
-
-
 /* g */
-create [or replace] procedure raiseTicket(
+create or replace procedure raiseTicket(
     IN _studentID INTEGER,
     IN _insID INTEGER,
     IN _courseID INTEGER,
@@ -339,7 +311,7 @@ END; $$;
 
 
 
-
+/* running a query with dynamic tableName */
 create or replace procedure testtest(
     tableName text
 )
