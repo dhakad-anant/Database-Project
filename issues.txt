@@ -2,3 +2,6 @@
 2. add 2 stored procedure for viewing and adding courses to the CourseCatalogue table
         name of the procedure: viewCourseCatalog and updateCourseCatalog
 3. make the deptName unique in the department table
+4. update time slot table, add not null to slotName, days can be NULL instead of not NULL
+5. add unique to the entryNumber attribute of the student table
+        add name to the student table
