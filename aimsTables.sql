@@ -23,7 +23,6 @@ CREATE TABLE PreRequisite(
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
     deptName VARCHAR(20) not null,
-    -- PRIMARY Key(deptID)
 );
 
 CREATE TABLE Instructor(
@@ -122,7 +121,7 @@ CREATE TABLE FacultyTicketTable_{insID}(
     PRIMARY KEY(studentID, studentTicketID)
 );
 /* @Dynamic Table */
-CREATE TABLE BatchAdvisorTicketTable_{insID}(
+CREATE TABLE BatchAdvisorTicketTable_{deptID}(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
     facultyVerdict BOOLEAN,
@@ -137,4 +136,10 @@ CREATE TABLE DeanAcademicsOfficeTicketTable(
     BatchAdvisorVerdict BOOLEAN,
     DeanAcademicsOfficeVerdict BOOLEAN,
     PRIMARY KEY(studentID, studentTicketID)
+);
+/* @Dynamic Table */
+CREATE TABLE BatchAdvisor_{deptID}(
+    insID INTEGER,
+    deptID INTEGER NOT NULL,
+    PRIMARY KEY(deptID)
 );

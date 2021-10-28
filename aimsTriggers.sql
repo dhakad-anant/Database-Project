@@ -1,55 +1,51 @@
 /* Trigger to generate faculty grade table corresponding to his (course, semester, year) */
-CREATE TRIGGER generateFacultyGradeTable
-after insert on Teaches 
+CREATE TRIGGER GenerateFacultyGradeTable 
+AFTER INSERT ON Teaches 
 For each STATEMENT 
-EXECUTE PROCEDURE generateFacultyGradeTable_trigger_function(
+EXECUTE PROCEDURE GenerateFacultyGradeTable_trigger_function(
     new.sectionID
 );
 
-create or replace function generateFacultyGradeTable_trigger_function(
+create or replace function GenerateFacultyGradeTable_trigger_function(
     IN sectionID INTEGER
 )
-    return return_type 
-    language plpgsql
+return return_type 
+language plpgsql
 as $$
 declare
-    query, tmp,tableName text;
+    query text;
+    tableName text;
 begin 
     tableName = 'FacultyGradeTable_' || sectionID::text;
-    query := 'CREATE table ';
-    query := query || tableName;
-    tmp := '(
+    query := 'CREATE TABLE ' || tableName || '(
         studentID integer not null,
         grade VARCHAR(2),
     );';
-    query := query || tmp;
 
     EXECUTE query;
-
     return new;
 end; $$;
 /* ********************************************************************** */
 
-/* TRIGGER - generate_transcript_table****************************************************/
-CREATE TRIGGER student
+/* *************   TRIGGER - on inserting an entry in student table ********************************************/
+CREATE TRIGGER postInsertingStudent
 after insert on Student 
 For each STATEMENT 
-EXECUTE PROCEDURE student_trigger_function(studentID);
+EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 
-CREATE or replace FUNCTION student_trigger_function(
+CREATE or replace FUNCTION postInsertingStudent_trigger_function(
     IN studentID INTEGER
 )
-    returns TRIGGER
-    language plpgsql
+returns TRIGGER
+language plpgsql
 as $$
 declare
-    -- variable declaration
     tableName   text;
     query       text;
 begin
-    -- stored procedure body
-    tableName := 'Transcript_' || studentID::text;
-    query := 'CREATE Table ' || tableName;
+    /* Create transcript table for each student */
+    tableName := 'Transcript_' || new.studentID::text;
+    query := 'CREATE TABLE ' || tableName;
     query := query || '
         (
             courseID INTEGER NOT NULL,
@@ -60,20 +56,23 @@ begin
             FOREIGN KEY(courseID, semester, year) REFERENCES CourseOffering(courseID, semester, year)
         );';
     
-    EXECUTE query; -- transcript table created
+    EXECUTE query;
 
-
-
-    tableName := 'Transcript_' || studentID::text;
-    query := 'CREATE Table ' || tableName;
+    /* Create seperate ticket table for each student */
+    tableName := 'StudentTicketTable_' || new.studentID::text;
+    query := 'CREATE TABLE ' || tableName;
     query := query || '
         (
+            insID INTEGER NOT NULL,
             courseID INTEGER NOT NULL,
             semester INTEGER NOT NULL,
             year INTEGER NOT NULL,
-            grade VARCHAR(2),
-            PRIMARY KEY(courseID, semester, year),
-            FOREIGN KEY(courseID, semester, year) REFERENCES CourseOffering(courseID, semester, year)
+            timeSlotID INTEGER NOT NULL,
+            ticketID SERIAL, 
+            facultyVerdict BOOLEAN,
+            batchAdvisorVerdict BOOLEAN,
+            deanAcademicsOfficeTicketTableVerdict BOOLEAN,
+            PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
         );';
     
     EXECUTE query; -- transcript table created
@@ -83,6 +82,122 @@ begin
     -- student(read only), dean(read & write), 
 end; $$;   
 /* ******************************************************************************************** TRIGGER 1 - generate_transcript_table ends ******************************************************************************************** */
+
+
+
+
+
+/* On adding a new instructor to the instructor table, we create a seperate ticket table for each faculty */
+CREATE TRIGGER postInsertingInstructor
+after insert on Instructor 
+For each STATEMENT 
+EXECUTE PROCEDURE postInsertingInstructor_trigger_function();
+
+CREATE or replace FUNCTION postInsertingInstructor_trigger_function(
+)
+returns TRIGGER
+language plpgsql
+as $$
+declare
+    -- variable declaration
+    tableName   text;
+    query       text;
+begin
+
+    tableName := 'FacultyTicketTable__' || new.insID::text;
+    query := 'CREATE TABLE ' || tableName;
+    query := query || '
+        (
+            studentID INTEGER NOT NULL,
+            studentTicketID INTEGER NOT NULL,
+            facultyVerdict BOOLEAN,
+            BatchAdvisorVerdict BOOLEAN,
+            DeanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(studentID, studentTicketID)
+        );';
+    
+    EXECUTE query; 
+    return new;
+
+end; $$; 
+/* ************************************************************************ */
+
+
+/* Creating BatchAdvisor through Trigger on insert in Department */
+CREATE TRIGGER postInsertingDepartment
+AFTER INSERT ON Department 
+For each STATEMENT 
+EXECUTE PROCEDURE postInsertingDepartment_trigger_function();
+
+CREATE or replace FUNCTION postInsertingDepartment_trigger_function(
+)
+returns TRIGGER
+language plpgsql
+as $$
+declare
+    tableName   text;
+    query       text;
+begin
+    tableName := 'BatchAdvisor_' || new.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            insID INTEGER,
+            deptID INTEGER NOT NULL,
+            PRIMARY KEY(deptID)
+        );';
+    EXECUTE query; 
+
+    query := 'INSERT INTO ' || tableName || '(insID, deptID) values('||NULL||','||new.deptID||')';
+    EXECUTE query;
+
+    tableName := 'BatchAdvisorTicketTable_' || new.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            studentID INTEGER NOT NULL,
+            studentTicketID INTEGER NOT NULL,
+            facultyVerdict BOOLEAN,
+            BatchAdvisorVerdict BOOLEAN,
+            DeanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(studentID, studentTicketID)
+        );';
+    EXECUTE query; 
+
+    return new;
+end; $$; 
+/* ************************************************************************ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

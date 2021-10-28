@@ -85,7 +85,7 @@ create or replace procedure RegisterStudent(
 )
 language plpgsql
 as $$
-declare
+declare 
     studentTrancriptTableName text;
     prevCredit Numeric(4,2)r;
     prevPrevCredit Numeric(4,2)r;
@@ -104,54 +104,66 @@ declare
     currentCGPA NUMERIC(4,2);
     cgpaRequired NUMERIC(4,2);
     _courseID INTEGER;
+    query text;
 begin
-
     -- Computing the Course Id
-    _courseID:=-1
+    _courseID := -1
     select courseID into _courseID
     from CourseCatalogue
     where CourseCatalogue.courseCode = _courseCode;
 
-    if _courseID=-1 then 
+    if _courseID = -1 then 
         raise notice 'Course Does not Exist!'
         return;
     end if;
 
     --  Computing the Instructor Id
-    _insId:=-1;
+    _insId := -1;
     select Instructor.insId into _insId
     from Instructor
     where Instructor.insName=_insName;
 
-    if _insId= -1 then
+    if _insId = -1 then
         raise notice 'Instructor does not exist!'
         return;
     end if;
 
+
+    -- Fetching the transcript table for each student
     studentTrancriptTableName:= 'Transcript_' || _studentID::text;
 
-    SELECT sum(CourseCatalogue.C) INTO currentCredit
-    from studentTrancriptTableName, CourseCatalogue
-    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and studentTrancriptTableName.semester=_semester;
+    query = 'SELECT sum(CourseCatalogue.C)
+            from ' || studentTrancriptTableName || ', CourseCatalogue
+            where ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            and ' ||studentTrancriptTableName || '.semester = $1'
+
+    for currentCredit in EXECUTE query using _semester loop 
+        break;
+    end loop;
+    
 
     -- Credit of the course that we are currently enrolling in
     SELECT CourseCatalogue.C INTO courseCredit
     from CourseCatalogue
-    where CourseCatalogue.courseId=_courseID;
+    where CourseCatalogue.courseId = _courseID;
 
-    currentCredit:=currentCredit+ courseCredit;
+    currentCredit := currentCredit+ courseCredit;
 
     -- check 1.25 rule
-
     prevCredit:=-1
-    SELECT sum(CourseCatalogue.C) INTO prevCredit
-    from studentTrancriptTableName, CourseCatalogue
-    where studentTrancriptTableName.courseID=CourseCatalogue.courseID and
-     (
-        (studentTrancriptTableName.year = _year - 1 and studentTrancriptTableName.semester = 2 and _semester = 1)
-                                    OR 
-        (studentTrancriptTableName.year = _year and studentTrancriptTableName.semester = 1 and _semester = 2) 
-    );
+    query = 'SELECT sum(CourseCatalogue.C)
+            from ' || studentTrancriptTableName || ', CourseCatalogue
+            where ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            and (
+                ('||studentTrancriptTableName||'.year = $1 and '||studentTrancriptTableName||'.semester = 2 and $2 = 1)
+                                            OR 
+                ('||studentTrancriptTableName||'.year = $3 and '||studentTrancriptTableName||'.semester = 1 and $4 = 2) 
+            )';
+
+    for prevCredit in EXECUTE query using _year - 1, _semester, year, _semester  loop 
+        break;
+    end loop;
+
 
     prevPrevCredit:=-1
     SELECT sum(CourseCatalogue.C) INTO prevPrevCredit
@@ -226,6 +238,7 @@ begin
         return;
     end if;
     
+
 end; $$; 
 /* ----------------------------------------------------------- */
 
@@ -306,6 +319,31 @@ END; $$;
 /* ************************ */
 
 
+/* procedure to make a faculty a BatchAdvisor */
+create or replace procedure makeBatchAdvisor(
+    IN _insID INTEGER,
+    IN _deptID INTEGER,
+)
+language plpgsql
+as $$
+declare
+    tableName text;
+begin
+-- stored procedure body
+    tableName = 'BatchAdvisor_' || new.deptID::text;
+
+    query = 'UPDATE '|| tableName ||' SET insID = '|| _insID ||' where deptID = '||_deptID||';'
+    EXECUTE query;
+end; $$;
+/*****************************************/
+
+
+
+
+
+
+
+
 
 
 
@@ -328,7 +366,7 @@ begin
     -- query_expression := 'select (id, name, balance) 
     -- from $1';
     query_expression := 'select id, name, balance
-    from ' || tableName || ' where balance != $1 and id != $2';
+    from ' || tableName || ' where '||tableName||'.balance != $1 and '||tableName||'.id != $2';
 
     for rec in EXECUTE query_expression using cnt, cnt2 loop 
         raise notice '%', rec;
