@@ -71,7 +71,7 @@ begin
             ticketID SERIAL, 
             facultyVerdict BOOLEAN,
             batchAdvisorVerdict BOOLEAN,
-            deanAcademicsOfficeTicketTableVerdict BOOLEAN,
+            deanAcademicsOfficeVerdict BOOLEAN,
             PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
         );';
     

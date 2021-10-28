@@ -382,3 +382,36 @@ begin
 end; $$;
 
 
+/* Syntax of a function that returns a TABLE */
+create or replace function function_name(param_list)
+    return table(column_list)
+    language plpgsql
+as $$
+declare
+    --variable declaration
+begin 
+    --logic
+end; $$;
+
+
+create or replace function testselect()
+returns table(
+        id INTEGER,
+        name varchar(20),
+        balance NUMERIC
+    )
+language plpgsql
+as $$
+DECLARE
+    rec record;
+begin
+    for rec in (select * from accounts) loop 
+        id := rec.id;
+        name := rec.name;
+        balance := rec.balance; 
+        return next;
+    end loop;  
+end; $$;
+select * from testselect();
+
+@hello brother

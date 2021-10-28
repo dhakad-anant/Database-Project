@@ -103,7 +103,7 @@ CREATE TABLE StudentTicketTable_{studentID}(
     ticketID SERIAL, 
     facultyVerdict BOOLEAN,
     batchAdvisorVerdict BOOLEAN,
-    deanAcademicsOfficeTicketTableVerdict BOOLEAN,
+    deanAcademicsOfficeVerdict BOOLEAN,
     PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
 );
 /* @Dynamic Table */
@@ -111,8 +111,8 @@ CREATE TABLE FacultyTicketTable_{insID}(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
     facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
+    batchAdvisorVerdict BOOLEAN,
+    deanAcademicsOfficeVerdict BOOLEAN, 
     PRIMARY KEY(studentID, studentTicketID)
 );
 /* @Dynamic Table */
@@ -120,16 +120,16 @@ CREATE TABLE BatchAdvisorTicketTable_{deptID}(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
     facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
+    batchAdvisorVerdict BOOLEAN,
+    deanAcademicsOfficeVerdict BOOLEAN,
     PRIMARY KEY(studentID, studentTicketID)
 );
 CREATE TABLE DeanAcademicsOfficeTicketTable(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
     facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
+    batchAdvisorVerdict BOOLEAN,
+    deanAcademicsOfficeVerdict BOOLEAN,
     PRIMARY KEY(studentID, studentTicketID)
 );
 /* @Dynamic Table */
@@ -137,4 +137,5 @@ CREATE TABLE BatchAdvisor_{deptID}(
     insID INTEGER,
     deptID INTEGER NOT NULL,
     PRIMARY KEY(deptID)
+    FOREIGN KEY(deptID) REFERENCES Department(deptID)
 );
