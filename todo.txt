@@ -1,6 +1,6 @@
 1. add dynamic table for ug curriculum list in postinsertdepartment trigger
 2. add 2 stored procedure for viewing and adding courses to the CourseCatalogue table
-        name of the procedure: viewCourseCatalog and updateCourseCatalog
+        name of the procedure: viewCourseCatalogue and updateCourseCatalogue
 3. make the deptName unique in the department table
 4. update time slot table, add not null to slotName, days can be NULL instead of not NULL
 5. add unique to the entryNumber attribute of the student table
@@ -11,3 +11,6 @@
 8. implement the stored procedure canGraduate
 9. correct the notion of batch advisor (if time permits) but this would contradict the doc
 10. see the permissions aspect for this code
+11. Security: implement this feature that the batch advisor can access the table of his own department only 
+        i.e. CS advisor cannot access EE batch advisor table
+12. once dean academics verdict changes to yes, write code in the update function of dean academics

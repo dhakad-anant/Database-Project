@@ -1,4 +1,4 @@
-/* Dean sections floats a course in CourseOffering */
+/* insert into Course Offering Table */
 create or replace procedure offerCourse(
     IN _courseID INTEGER, 
     IN _semester INTEGER,
@@ -72,6 +72,24 @@ BEGIN
 END; $$;
 /* ********************************************************************** */
 
+/* ************************************************************** */
+
+/* procedure to make a faculty a BatchAdvisor */
+create or replace procedure makeBatchAdvisor(
+    IN _insID INTEGER,
+    IN _deptID INTEGER,
+)
+language plpgsql
+as $$
+declare
+    tableName text;
+begin
+-- stored procedure body
+    tableName = 'BatchAdvisor_' || new.deptID::text;
+
+    query = 'UPDATE '|| tableName ||' SET insID = '|| _insID ||' where deptID = '||_deptID||';'
+    EXECUTE query;
+end; $$;
 
 /* ----------------------------------------------------------- */
 /* Registering student */
@@ -278,235 +296,6 @@ begin
 end; $$; 
 /* ----------------------------------------------------------- */
 
-/* g */
-create or replace procedure raiseTicket(
-    IN _studentID INTEGER,
-    IN _insID INTEGER,
-    IN _courseID INTEGER,
-    IN _semester INTEGER,
-    IN _year INTEGER,
-    IN _timeSlotID INTEGER
-)
-language plpgsql
-as $$
-declare
-    tableName text;
-    facultyTableName text;
-    batchAdvisorTableName text;
-    query text;
-    cnt INTEGER := 0;
-    _studentTicketID INTEGER;
-    _deptID INTEGER;
-BEGIN
-    tableName := 'StudentTicketTable_' || _studentID::text;
-    
-    query =  'select count(*) 
-                from '|| tableName ||'
-                    where insID = $1 and
-                    courseID = $2 and
-                    semester = $3 and
-                    year = $4 and
-                    timeSlotID = $5';
-
-    for cnt in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
-        break;
-    end loop;
-    if cnt != 0 then 
-        raise notice 'Ticket is already raised !!!';
-        return;
-    end if;
-
-
-    /* inserting into student ticket table */
-    query := 'INSERT INTO ' || tableName || '(insID,courseID,semester,year,timeSlotID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) values('||_insID||','||_courseID||','||_semester||','||_year||','||_timeSlotID||',NULL,NULL,NULL)';
-
-    EXECUTE query;
-
-
-    query =  'select ticketID
-                from '|| tableName ||'
-                    where insID = $1 and
-                    courseID = $2 and
-                    semester = $3 and
-                    year = $4 and
-                    timeSlotID = $5';
-
-    for _studentTicketID in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
-        break;
-    end loop;
-
-    /* inserting into Faculty Ticket Table */
-    facultyTableName := 'FacultyTicketTable_' || _insID::text;
-    query := 'INSERT INTO ' || facultyTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-
-    /* inserting into Batch Advisor Ticket Table */
-    -- getting student's department ID
-    select Student.deptID into _deptID from Student where Student.studentID = _studentID;    
-    batchAdvisorTableName := 'BatchAdvisorTicketTable_' || _deptID::text;
-    query := 'INSERT INTO ' || batchAdvisorTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-
-
-    /* inserting into Dean Ticket Table */
-    query := 'INSERT INTO DeanAcademicsOfficeTicketTable(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-    
-END; $$;
-/* ************************ */
-
-
-/* procedure to make a faculty a BatchAdvisor */
-create or replace procedure makeBatchAdvisor(
-    IN _insID INTEGER,
-    IN _deptID INTEGER,
-)
-language plpgsql
-as $$
-declare
-    tableName text;
-begin
--- stored procedure body
-    tableName = 'BatchAdvisor_' || new.deptID::text;
-
-    query = 'UPDATE '|| tableName ||' SET insID = '|| _insID ||' where deptID = '||_deptID||';'
-    EXECUTE query;
-end; $$;
-/*****************************************/
-
-/*************************************************************  */
-create or replace procedure viewFacultyTicketTable(
-    IN _insID INTEGER
-)
-language plpgsql
-as $$
-declare
-    tableName text;
-    query text;
-begin
-    tableName := 'FacultyTicketTable_' || _insID::text;
-
-    query := 'select * 
-              from '||tableName||' 
-              where '||tableName||'.facultyVerdict = NULL;';
-    EXECUTE query;
-end; $$;
-
-create or replace procedure updateFacultyTicketTable(
-    IN _insID INTEGER,
-    IN _studentTicketID INTEGER,    
-    IN _facultyVerdict BOOLEAN,    
-)
-language plpgsql
-as $$
-declare
--- variable declaration
-    tableName text;
-    query text;
-begin
--- stored procedure body
-    tableName := 'FacultyTicketTable_' || _insID::text;
-
-    query := 'UPDATE '|| tableName||'
-    SET facultyVerdict = ' || _facultyVerdict ||'
-    where '|| tableName||'.studentTicketID = ' || _studentTicketID;
-    
-    EXECUTE query;
- 
-end; $$;
-/************************************************************* */
-
-
-/************************************************************* */
-create or replace procedure viewBatchAdvisorTicketTable(
-    IN _deptID INTEGER
-)
-language plpgsql
-as $$
-declare
-    tableName text;
-    query text;
-begin
-    tableName := 'BatchAdvisor_' || _deptID::text;
-
-    query := 'select * 
-              from '||tableName||' 
-              where '||tableName||'.batchAdvisorVerdict = NULL;';
-    EXECUTE query;
-end; $$;
-
-
-create or replace procedure updateBatchAdvisorTicketTable(
-    IN _deptID INTEGER,
-    IN _studentTicketID INTEGER,    
-    IN _batchAdvisorVerdict BOOLEAN,    
-)
-language plpgsql
-as $$
-declare
--- variable declaration
-    tableName text;
-    query text;
-begin
--- stored procedure body
-    tableName := 'BatchAdvisorTicketTable_' || _deptID::text;
-
-    query := 'UPDATE '|| tableName||'
-    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict ||'
-    where '|| tableName||'.studentTicketID = ' || _studentTicketID;
-    
-    EXECUTE query;
- 
-end; $$;
-/************************************************************* */
-
-
-/************************************************************* */
-create or replace procedure viewDeanAcademicsOfficeTicketTable()
-language plpgsql
-as $$
-declare
-begin
-    EXECUTE (select * from DeanAcademicsOfficeTicketTable
-    where deanAcademicsOfficeVerdict = NULL);
-end; $$;
-
-
-create or replace procedure updateDeanAcademicsOfficeTicketTable(
-    IN _studentTicketID INTEGER,    
-    IN _deanAcademicsOfficeVerdict BOOLEAN,    
-)
-language plpgsql
-as $$
-declare
--- variable declaration
-    tableName text;
-    query text;
-begin
--- stored procedure body
-    tableName := 'DeanAcademicsOfficeTicketTable';
-
-    query := 'UPDATE '|| tableName||'
-    SET deanAcademicsOfficeVerdict = ' || _deanAcademicsOfficeVerdict ||'
-    where '|| tableName||'.studentTicketID = ' || _studentTicketID;
-    
-    EXECUTE query;
- 
-end; $$;
-/************************************************************* */
-
-/************************************************************* */
-create or replace procedure viewStudentTicketTable(
-
-)
-language plpgsql
-as $$
-declare
-begin
-    select * from DeanAcademicsOfficeTicketTable
-    where deanAcademicsOfficeVerdict = NULL;
-end; $$;
-/************************************************************* */
 
 
 /* procedure uploading_time-table slots*********************************************************************************************/

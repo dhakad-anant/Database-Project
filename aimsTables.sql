@@ -41,21 +41,21 @@ CREATE TABLE TimeSlot(
     PRIMARY KEY(timeSlotID)
 );
 
-    CREATE TABLE CourseOffering(
-        courseOfferingID SERIAL,
-        courseID INTEGER NOT NULL,
-        semester INTEGER NOT NULL,
-        year INTEGER NOT NULL,
-        cgpaRequired NUMERIC(4, 2),
-        PRIMARY KEY(courseID,semester,year),
-        FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
-    );
+CREATE TABLE CourseOffering(
+    courseOfferingID SERIAL,
+    courseID INTEGER NOT NULL,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    cgpaRequired NUMERIC(4, 2),
+    PRIMARY KEY(courseID,semester,year),
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+);
 
-    create table BatchesAllowed(
-        CourseOfferingID INTEGER NOT NULL,
-        Batch INTEGER NOT NULL,
-        FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID)
-    );
+create table BatchesAllowed(
+    CourseOfferingID INTEGER NOT NULL,
+    Batch INTEGER NOT NULL,
+    FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID)
+);
 
 
 CREATE TABLE Student(
@@ -108,7 +108,7 @@ CREATE TABLE StudentTicketTable_{studentID}(
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     timeSlotID INTEGER NOT NULL,
-    ticketID SERIAL, 
+    studentTicketID SERIAL, 
     facultyVerdict BOOLEAN,
     batchAdvisorVerdict BOOLEAN,
     deanAcademicsOfficeVerdict BOOLEAN,
