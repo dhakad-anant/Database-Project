@@ -17,7 +17,7 @@ CREATE TABLE PreRequisite(
 
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
-    deptName VARCHAR(20) not null
+    deptName VARCHAR(20) NOT NULL UNIQUE
 );
 
 CREATE TABLE Instructor(
@@ -42,6 +42,7 @@ CREATE TABLE TimeSlot(
 );
 
 CREATE TABLE CourseOffering(
+    courseOfferingID SERIAL,
     courseID INTEGER NOT NULL,
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
@@ -49,6 +50,13 @@ CREATE TABLE CourseOffering(
     PRIMARY KEY(courseID,semester,year),
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
+
+create table BatchesAllowed(
+    CourseOfferingID INTEGER NOT NULL,
+    Batch INTEGER NOT NULL,
+    FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID)
+);
+
 
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
@@ -100,7 +108,7 @@ CREATE TABLE StudentTicketTable_{studentID}(
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     timeSlotID INTEGER NOT NULL,
-    ticketID SERIAL, 
+    studentTicketID SERIAL, 
     facultyVerdict BOOLEAN,
     batchAdvisorVerdict BOOLEAN,
     deanAcademicsOfficeVerdict BOOLEAN,
@@ -138,4 +146,27 @@ CREATE TABLE BatchAdvisor_{deptID}(
     deptID INTEGER NOT NULL,
     PRIMARY KEY(deptID)
     FOREIGN KEY(deptID) REFERENCES Department(deptID)
+);
+
+create Table UGCurriculum(
+    curriculumID SERIAL PRIMARY KEY,
+    batch INTEGER NOT NULL,
+    deptID INTEGER NOT NULL,
+    FOREIGN KEY(deptID) REFERENCES Department(deptID)
+);
+
+-- @Dynamic Table
+create table CurriculumList_{curriculumID}(
+    courseCategory VARCHAR(20) NOT NULL,
+    courseID integer not null,
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+);
+
+-- @Dynamic Table
+create table CurriculumRequirements_{curriculumID}(
+    numCreditsProgramCores INTEGER NOT NULL,
+    numCreditsProgramElectives INTEGER NOT NULL,
+    numCreditsScienceCores INTEGER NOT NULL,
+    numCreditsOpenElectives INTEGER NOT NULL,
+    minCGPA INTEGER NOT NULL
 );

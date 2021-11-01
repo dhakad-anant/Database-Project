@@ -24,13 +24,14 @@ begin
 
     EXECUTE query;
     return new;
+    
 end; $$;
 /* ********************************************************************** */
 
 /* *************   TRIGGER - on inserting an entry in student table ********************************************/
 CREATE TRIGGER postInsertingStudent
 after insert on Student 
-For each STATEMENT 
+FOR EACH STATEMENT 
 EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 
 CREATE or replace FUNCTION postInsertingStudent_trigger_function(
