@@ -15,21 +15,52 @@ revoke all on procedure <procedure_name> from public;
 
 
 create or replace procedure test2(
-    in _name text
+    in value numeric(4,2),
+    inout _id numeric(4,2)
 )
 language plpgsql SECURITY DEFINER
 as $$
 declare 
-    rec record;
 begin 
-    INSERT into department(deptname) values(_name);
+    -- INSERT into department(deptname) values(_name);
     -- for rec in (select * from department)
     -- loop
     --     raise notice '% ', rec;
     -- end loop;
     -- -- select * from department;
+    -- select deptId into _id from department where department.deptName=_name;
+    _id:=value/2;
+
 END; $$;
 
-call test2('me');
+create or replace procedure test(
+    -- in _name text,
+    -- inout _id integer
+    -- in value integer
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare 
+    -- ans numeric(4,2);
+    tableName text;
+    query text;
+begin 
+    tableName:='department';
+    query= 'SELECT * FROM ' || tableName;
+    execute query;
+    -- select * from tableName;
+    -- INSERT into department(deptname) values(_name);
+    -- for rec in (select * from department)
+    -- loop
+    --     raise notice '% ', rec;
+    -- end loop;
+    -- -- select * from department;
+    -- ans:=-1;
+    -- raise notice 'value of ans %',ans;
+    -- call test2(value,ans);
+    -- raise notice 'value of ans %',ans;
+END; $$;
+
+call test();
 
 grant on procedure 

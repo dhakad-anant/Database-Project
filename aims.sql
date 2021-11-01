@@ -23,7 +23,9 @@ Doubt: What would be the primary key for this table? */
 
 
 /* ******************************TRIGGER 2 - Compute the current CGPA of any student*********************************************************************************************/
-create or replace procedure calculate_current_CGPA(IN INT studentID)
+create or replace procedure calculate_current_CGPA(
+    IN INT studentID, 
+    INOUT currenCGPA numeric(4,2) )
     language plpgsql    
 as $$
 declare
@@ -52,7 +54,7 @@ begin
     end loop;
     
     CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
-
+    currentCGPA:=CGPA;
     raise notice 'CGPA for studentID % is %', 
         studentID, 
         CGPA;
