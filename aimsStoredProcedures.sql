@@ -306,13 +306,13 @@ declare
     filepath    text;
     query    text;
 begin
-    filepath := '''C:\fordbmsproject\filename.csv''';
-    -- query := '
-    --     COPY persons(first_name, last_name, dob, email)
-    --     FROM 'C:\sampledb\persons.csv'
-    --     DELIMITER ','
-    --     CSV HEADER;
-    -- ';
+    filepath := '''C:\fordbmsproject\timetable.csv''';
+    /* query := '
+        COPY persons(first_name, last_name, dob, email)
+        FROM 'C:\sampledb\persons.csv'
+        DELIMITER ','
+        CSV HEADER;
+    '; */
 
     query := 'COPY TimeSlot(timeSlotID, slotName, duration, monday, tuesday, wednesday, thursday, friday) 
               FROM ' || filepath || 
@@ -379,9 +379,7 @@ end; $$;
 
 
 /* Procedure for uploading grades of a particular (course, semester, year, instructor) */
-create or replace procedure uploadCourseGrade(
-    
-)
+create or replace procedure uploadCourseGrade()
 language plpgsql
 as $$
 declare

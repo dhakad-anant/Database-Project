@@ -1,5 +1,6 @@
 CREATE DATABASE aims;
 
+
 DROP TABLE IF EXISTS CourseCatalogue;
 CREATE TABLE CourseCatalogue(
     courseID SERIAL PRIMARY KEY,
@@ -11,6 +12,7 @@ CREATE TABLE CourseCatalogue(
     C Numeric(4,2) NOT NULL
 );
 
+
 DROP TABLE IF EXISTS PreRequisite;
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
@@ -19,11 +21,13 @@ CREATE TABLE PreRequisite(
     FOREIGN KEY(preReqCourseID) REFERENCES CourseCatalogue(courseID) ON DELETE CASCADE
 );
 
+
 DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
     deptName VARCHAR(20) not null
 );
+
 
 DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
@@ -32,6 +36,7 @@ CREATE TABLE Instructor(
     deptID INTEGER not NULL,
     FOREIGN key(deptID) REFERENCES Department(deptID)
 );
+
 
 DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
@@ -48,6 +53,7 @@ CREATE TABLE TimeSlot(
     PRIMARY KEY(timeSlotID)
 );
 
+
 DROP TABLE IF EXISTS CourseOffering;
 CREATE TABLE CourseOffering(
     courseID INTEGER NOT NULL,
@@ -58,6 +64,7 @@ CREATE TABLE CourseOffering(
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
+
 DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
@@ -67,6 +74,7 @@ CREATE TABLE Student(
     Name VARCHAR(50) NOT NULL,
     FOREIGN key(deptID) REFERENCES Department(deptID) 
 );
+
 
 DROP TABLE IF EXISTS Teaches;
 CREATE TABLE Teaches(
@@ -82,6 +90,7 @@ CREATE TABLE Teaches(
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
 
+
 /* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
 DROP TABLE IF EXISTS GradeMapping;
 CREATE TABLE GradeMapping(
@@ -89,6 +98,8 @@ CREATE TABLE GradeMapping(
     val   INTEGER   NOT NULL,
     PRIMARY KEY(grade)
 );
+
+
 /* INSERTING GradeMapping ROWS */
 INSERT INTO GradeMapping(grade, val)
     values('A', 10),
@@ -110,4 +121,60 @@ CREATE TABLE DeanAcademicsOfficeTicketTable(
 );
 
 
+/* CREATING STORED FOR uploading TimeTable for a semester */
+create or replace procedure upload_timetable_slots()
+language plpgsql
+as $$
+declare
+    filepath    text;
+    query    text;
+begin
+    filepath := '''C:\fordbmsproject\timetable.csv''';
+    /* query := '
+        COPY persons(first_name, last_name, dob, email)
+        FROM 'C:\sampledb\persons.csv'
+        DELIMITER ','
+        CSV HEADER;
+    '; */
+
+    query := 'COPY TimeSlot(timeSlotID, slotName, duration, monday, tuesday, wednesday, thursday, friday) 
+              FROM ' || filepath || 
+              ' DELIMITER '','' 
+              CSV HEADER;';
+    EXECUTE QUERY;
+end; $$;
+
+
+/* CREATING MAJOR STAKEHOLDER ROLES */
+CREATE ROLE Students;
+CREATE ROLE Faculty;
+CREATE ROLE BatchAdvisor;
+CREATE ROLE DeanAcademicsOffice;
+
+
+/* creating academic section (optional) */
+CREATE ROLE academicsection with 
+    LOGIN PASSWORD 'academicsection'
+    IN ROLE pg_read_server_files;
+
+
+/* giving SELECT permission on TimeSlot table to everyone */
+GRANT SELECT 
+ON TimeSlot    
+TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice;
+
+/* giving all permissions on TimeSlot table to academicsection */
+GRANT ALL 
+ON TimeSlot 
+TO academicsection;
+
+/* Creating dummy student */
+CREATE ROLE rahul with  
+    LOGIN 
+    PASSWORD 'rahul'
+    IN ROLE Students;
+
+/* uploading timetableslot */
+-- @login with academicsection
+call upload_timetable_slots();
 
