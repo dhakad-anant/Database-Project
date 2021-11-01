@@ -394,7 +394,9 @@ begin
 end; $$;
 
 
-create or replace function testselect()
+create or replace function testselect(
+    varTableName text;
+)
 returns table(
         id INTEGER,
         name varchar(20),
@@ -412,6 +414,9 @@ begin
         return next;
     end loop;  
 end; $$;
+
 select * from testselect();
 
-@hello brother
+
+
+

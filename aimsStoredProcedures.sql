@@ -536,9 +536,75 @@ end; $$;
 /* *********************************************************************************************************** */
 
 
+/* Procedure the print the Transcript Table (gradesheet) of a student */
+create or replace procedure printGradeSheet(
+    IN studentID INTEGER
+)
+language plpgsql
+as $$
+declare
+
+begin
+
+end; $$;
+/****************************************************************************************/
 
 
-/********************  TESTING CODE ********************** /
+/* Compute the current CGPA of any student************************************************************************/
+create or replace procedure calculate_current_CGPA(IN INT studentID)
+    language plpgsql    
+as $$
+declare
+    -- Transcritp_1
+    transcriptTable text;
+    totalCredits    INTEGER := 0;
+    numerator       INTEGER := 0;
+    rec             record;
+    CGPA            NUMERIC := 0.0;
+begin
+    transcriptTable := 'Transcript_' || studentID::text;
+
+    for rec in (
+        select (CourseCatalogue.C, GradeMapping.val) into rec
+        from transcriptTable, CourseCatalogue, GradeMapping
+        where transcriptTable.courseID = CourseCatalogue.courseID AND 
+            transcriptTable.year = CourseCatalogue.year AND 
+            transcriptTable.semester = CourseCatalogue.semester AND
+            transcriptTable.grade <> NULL AND
+            transcriptTable.grade <> 'F' AND 
+            transcriptTable.grade = GradeMapping.grade
+    ) 
+    loop
+        totalCredits := totalCredits + rec.C;
+        numerator := numertor + (rec.val * rec.C);
+    end loop;
+    
+    CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
+
+    raise notice 'CGPA for studentID % is %', 
+        studentID, 
+        CGPA;
+end; $$;
+-- cgpa = (summation{no. of credits x grade_in_that_course})/totalCredits
+/****************************************************************************************** */
+
+
+/* Procedure for uploading grades of a particular (course, semester, year, instructor) */
+create or replace procedure uploadCourseGrade(
+    
+)
+language plpgsql
+as $$
+declare
+
+begin
+
+end; $$;
+/****************************************************************************************/
+
+
+
+/********************  TESTING CODE ****************************************************************************************************** /
 
 /* running a query with dynamic tableName */
 create or replace procedure testtest(

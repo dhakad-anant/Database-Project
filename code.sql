@@ -1,121 +1,3 @@
-CREATE TABLE CourseCatalogue(
-    courseID VARCHAR(10) NOT NULL,
-    L INTEGER NOT NULL,
-    T INTEGER NOT NULL,
-    P INTEGER NOT NULL,
-    S INTEGER NOT NULL,
-    C INTEGER NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    PRIMARY KEY(courseID, semester, year)
-);
-
--- One student must not have more than one course having same timeSlot 
-CREATE TABLE TimeSlot(
-    timeSlotID INTEGER NOT NULL,
-    duration integer NOT NULL, -- in minutes
-    slotName varchar(20) not null,
-
-    monday varchar(20) not null,
-    tuesday varchar(20) not null,
-    wednesday varchar(20) not null,
-    thursday varchar(20) not null,
-    friday varchar(20) not null,
-    
-    PRIMARY KEY(timeSlotID, slotName)
-);
-
-
-
-
-
--- -- Refer to PreRequisite Table to access the list of PreRequisite
-CREATE TABLE Department(
-    deptID INTEGER not NULL,
-    deptName VARCHAR(20) not null,
-    PRIMARY Key(deptID)
-);
-
-CREATE TABLE Student(
-    studentID INTEGER NOT NULL,
-    batch INTEGER NOT NULL,
-    deptID INTEGER not NULL,
-    entryNumber varchar(30) not null,
-    Name VARCHAR(50) NOT NULL,
-    PRIMARY KEY(studentID),
-    FOREIGN key(deptID) REFERENCES Department(deptID) 
-);
-
--- CREATE TABLE Transcript(
---     studentID INTEGER NOT NULL,
---     semester INTEGER NOT NULL,
---     year INTEGER NOT NULL,
---     grade VARCHAR(2) NOT NULL,
---     PRIMARY KEY(courseID),
---     FOREIGN KEY(courseID) REFERENCES CourseCatalogue(courseID)
--- );
-
-/* Doubt: How do we know which Btech Table to Reference for each student?🤔
-Doubt: What would be the primary key for this table? */
-/* CREATE TABLE Btech(
-    courseID VARCHAR(10) NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    grade VARCHAR(2) NOT NULL,
-    PRIMARY KEY(courseID),
-    FOREIGN KEY(courseID) REFERENCES CourseCatalogue(courseID)
-); */
-
-
-CREATE TABLE PreRequisite(
-    courseID INTEGER NOT NULL,
-    preReqCourseID INTEGER NOT NULL,
-    PRIMARY KEY(courseID),
-    FOREIGN KEY(preReqCourseID) REFERENCES CourseCatalogue(courseID) ON DELETE CASCADE
-);
-
-
-CREATE TABLE Instructor(
-    insID INTEGER NOT NULL,
-    deptID INTEGER not NULL,
-    PRIMARY KEY(insID),
-    FOREIGN key(deptID) REFERENCES Department(deptID), 
-);
-
-CREATE TABLE CourseOffering(
-    courseID VARCHAR(10) NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    timeSlotID INTEGER NOT NULL,
-    PRIMARY KEY(courseID,semester,year),
-    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID),
-    FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
-);
-
-CREATE TABLE Teaches(
-    insID INTEGER NOT NULL,
-    courseID VARCHAR(10) NOT NULL,
-    sectionID INTEGER NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    timeSlotID INTEGER NOT NULL,
-    PRIMARY KEY(insID,courseID,sectionID,semester,year),
-    FOREIGN KEY(insID) REFERENCES Instructor(insID),
-    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
-    FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
-);
-
-/* 
-A = 10
-A- = 9 
-B = 8
-B- = 7
-C = 6
-C- = 5
-F = 0
-*/
-
-
 /* ******************************TRIGGER 1 - generate_transcript_table*********************************************************************************************/
 CREATE TRIGGER generate_transcript_table
 after insert on Student 
@@ -153,8 +35,8 @@ end; $$;
 /* ******************************************************************************************** TRIGGER 1 - generate_transcript_table ends ******************************************************************************************** */
 
 
-/* ******************************TRIGGER 2 - Compute the current CGPA of any student*********************************************************************************************/
-create or replace procedure calculate_current_CGPA(IN INT studentID)
+/* Compute the current CGPA of any student************************************************************************/
+create or replace PROCEDURE calculate_current_CGPA(IN INT studentID, out _cgpa)
     language plpgsql    
 as $$
 declare
@@ -187,10 +69,12 @@ begin
     raise notice 'CGPA for studentID % is %', 
         studentID, 
         CGPA;
+    _cgpa := CGPA 
+    
 end; $$;
-/* ******************************************************************************************** TRIGGER 2 - generate_transcript_table ends ******************************************************************************************** */
-
 -- cgpa = (summation{no. of credits x grade_in_that_course})/totalCredits
+/****************************************************************************************** */
+
 
 
 
