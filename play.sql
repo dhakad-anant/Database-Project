@@ -417,6 +417,3 @@ end; $$;
 
 select * from testselect();
 
-
-
-
