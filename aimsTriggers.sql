@@ -7,10 +7,10 @@ EXECUTE PROCEDURE GenerateFacultyGradeTable_trigger_function(
 );
 
 create or replace function GenerateFacultyGradeTable_trigger_function(
-    IN sectionID INTEGER
+    IN sectionID INTEGER                                  -- Should a trigger function take any argument?
 )
-return return_type 
-language plpgsql
+returns TRIGGER                                            
+language plpgsql 
 as $$
 declare
     query text;

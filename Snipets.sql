@@ -12,26 +12,8 @@ Example: grant student,joe to student_login;
 3. remove permission to access stored procedure
 revoke all on procedure <procedure_name> from public;
 
+grant execute on procedure <procedure_name> to role;
 
-
-create or replace procedure test2(
-    in value numeric(4,2),
-    inout _id numeric(4,2)
-)
-language plpgsql SECURITY DEFINER
-as $$
-declare 
-begin 
-    -- INSERT into department(deptname) values(_name);
-    -- for rec in (select * from department)
-    -- loop
-    --     raise notice '% ', rec;
-    -- end loop;
-    -- -- select * from department;
-    -- select deptId into _id from department where department.deptName=_name;
-    _id:=value/2;
-
-END; $$;
 
 create or replace procedure test(
     -- in _name text,
@@ -61,6 +43,41 @@ begin
     -- raise notice 'value of ans %',ans;
 END; $$;
 
+create or replace procedure test(
+    in _name text
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare 
+begin 
+    INSERT into department(deptname) values(_name);
+END; $$;
 call test();
 
-grant on procedure 
+
+
+drop trigger <trigger_name> on <tableName> ;
+select * from department;
+
+drop table if exists department_demo;
+create table department_demo(
+    name varchar(20) 
+);
+drop trigger trigger_name on department ;
+drop function trigger_function();
+CREATE FUNCTION trigger_function()
+    RETURNS TRIGGER 
+    LANGUAGE PLPGSQL SECURITY INVOKER
+AS $$
+BEGIN
+    -- trigger logic
+    INSERT INTO department_demo(name) values(new.deptname);
+    raise notice 'Hehe! I am a trigger function.';
+    return new;
+END;
+$$;
+CREATE TRIGGER trigger_name 
+    AFTER INSERT
+    ON department
+    FOR EACH STATEMENT
+        EXECUTE PROCEDURE trigger_function();
