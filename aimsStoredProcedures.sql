@@ -5,7 +5,7 @@ create or replace procedure offerCourse(
     IN _year INTEGER,
     IN _cgpa NUMERIC(4, 2)
 )
-language plpgsql
+language plpgsql SECURITY DEFINER
 as $$
 declare
     cnt INTEGER = 0;
@@ -68,11 +68,9 @@ BEGIN
 
     INSERT into Teaches(insID,courseID,semester,year,timeSlotID) 
         values(_insID,_courseID,_semester,_year,allotedTimeSlotID);
-    
 END; $$;
 /* ********************************************************************** */
 
-/* ************************************************************** */
 
 
 /* procedure to make a faculty a BatchAdvisor */

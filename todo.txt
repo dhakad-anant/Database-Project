@@ -14,3 +14,4 @@
 11. Security: implement this feature that the batch advisor can access the table of his own department only 
         i.e. CS advisor cannot access EE batch advisor table
 12. once dean academics verdict changes to yes, write code in the update function of dean academics
+13. list of batches eliglible to register for a courseoffering

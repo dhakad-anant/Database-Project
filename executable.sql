@@ -1,5 +1,7 @@
+DROP DATABASE IF EXISTS aims;
 CREATE DATABASE aims;
 
+\c aims;
 
 DROP TABLE IF EXISTS CourseCatalogue;
 CREATE TABLE CourseCatalogue(
@@ -187,6 +189,7 @@ CREATE ROLE puneetgoyal with
     PASSWORD 'puneetgoyal'
     IN ROLE Faculty;
 
+
 /* revoking all permissions on procedure from public */
 REVOKE ALL 
 ON PROCEDURE upload_timetable_slots 
@@ -199,12 +202,21 @@ TO academicsection, DeanAcademicsOffice;
 
 
 /* uploading timetableslot */
-@login --with DeanAcademicsOffice
+-- @login --with DeanAcademicsOffice
 call upload_timetable_slots();
 
+/* giving all permission on Coursecatalogue to deanacademicsoffice */
+GRANT ALL 
+ON CourseCatalogue 
+TO deanacademicsoffice;
+
+/* Giving sequence permission to deanacademicsoffice */
+GRANT USAGE, SELECT 
+ON ALL SEQUENCES IN SCHEMA public 
+TO DeanAcademicsOffice;
 
 /* inserting dummy courses */
-@login --with DeanAcademicsOffice
+-- @login --with DeanAcademicsOffice
 INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C) 
     VALUES('CS201', 3, 2, 1, 5, 4),
           ('CS202', 3, 2, 1, 5, 3),
@@ -214,4 +226,33 @@ INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C)
           ('CS303', 3, 2, 1, 5, 4);
 
 
+/* API for faculty to float course */
+@login -- with deanacademics while creating 
+create or replace procedure offerCourse(
+    IN _courseID INTEGER, 
+    IN _semester INTEGER,
+    IN _year INTEGER,
+    IN _cgpa NUMERIC(4, 2)
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    cnt INTEGER = 0;
+begin
+    select count(*) into cnt 
+    from CourseCatalogue 
+    where CourseCatalogue.courseID = _courseID;
 
+    if cnt = 0 then 
+        raise notice 'Course not in CourseCatalogue!!!';
+        return;
+    end if;
+
+    if _cgpa != NULL and (_cgpa > 10.0 or _cgpa < 0) THEN
+        raise notice 'Invalid CGPA value!!!';
+        return;
+    end if;
+
+    INSERT into CourseOffering(courseID, semester, year, cgpaRequired)
+        values(_courseID, _semester, _year, _cgpa);
+end; $$;

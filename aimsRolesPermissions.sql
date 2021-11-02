@@ -40,3 +40,8 @@ TO academicsection, DeanAcademicsOffice;
 GRANT ALL 
 ON CourseCatalogue 
 TO deanacademicsoffice;
+
+/* Giving sequence permission to deanacademicsoffice */
+GRANT USAGE, SELECT 
+ON ALL SEQUENCES IN SCHEMA public 
+TO DeanAcademicsOffice;
