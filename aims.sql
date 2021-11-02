@@ -44,8 +44,7 @@ begin
         where transcriptTable.courseID = CourseCatalogue.courseID AND 
             transcriptTable.year = CourseCatalogue.year AND 
             transcriptTable.semester = CourseCatalogue.semester AND
-            transcriptTable.grade <> NULL AND
-            transcriptTable.grade <> 'F' AND 
+            (grade='A' OR grade='A-' OR grade='B' OR grade='B-' OR grade='C' OR grade='C-')
             transcriptTable.grade = GradeMapping.grade
     ) 
     loop

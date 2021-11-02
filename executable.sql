@@ -1,9 +1,9 @@
-DROP DATABASE IF EXISTS aims;
+-- DROP DATABASE IF EXISTS aims;
 CREATE DATABASE aims;
 
 \c aims;
 
-DROP TABLE IF EXISTS CourseCatalogue;
+-- DROP TABLE IF EXISTS CourseCatalogue;
 CREATE TABLE CourseCatalogue(
     courseID SERIAL PRIMARY KEY,
     courseCode VARCHAR(10) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE CourseCatalogue(
 );
 
 
-DROP TABLE IF EXISTS PreRequisite;
+-- DROP TABLE IF EXISTS PreRequisite;
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
     preReqCourseID INTEGER NOT NULL,
@@ -24,14 +24,14 @@ CREATE TABLE PreRequisite(
 );
 
 
-DROP TABLE IF EXISTS Department;
+-- DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
     deptID SERIAL PRIMARY KEY,
-    deptName VARCHAR(20) not null
+    deptName VARCHAR(20) NOT NULL UNIQUE
 );
 
 
-DROP TABLE IF EXISTS Instructor;
+-- DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
     insID SERIAL PRIMARY KEY,
     insName VARCHAR(50) NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE Instructor(
 );
 
 
-DROP TABLE IF EXISTS TimeSlot;
+-- DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
     timeSlotID INTEGER NOT NULL,
     slotName varchar(20) UNIQUE,
@@ -56,18 +56,26 @@ CREATE TABLE TimeSlot(
 );
 
 
-DROP TABLE IF EXISTS CourseOffering;
+-- DROP TABLE IF EXISTS CourseOffering;
 CREATE TABLE CourseOffering(
+    courseOfferingID SERIAL,
     courseID INTEGER NOT NULL,
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     cgpaRequired NUMERIC(4, 2),
-    PRIMARY KEY(courseID,semester,year),
+    timeSlotID INTEGER NOT NULL,
+    PRIMARY KEY(courseID,semester,year,timeSlotID),
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
+-- DROP TABLE IF EXISTS BatchesAllowed;
+CREATE TABLE BatchesAllowed(
+    CourseOfferingID INTEGER NOT NULL,
+    Batch INTEGER NOT NULL
+    /* FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID) */
+);
 
-DROP TABLE IF EXISTS Student;
+-- DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
     batch INTEGER NOT NULL,
@@ -78,7 +86,7 @@ CREATE TABLE Student(
 );
 
 
-DROP TABLE IF EXISTS Teaches;
+-- DROP TABLE IF EXISTS Teaches;
 CREATE TABLE Teaches(
     insID INTEGER NOT NULL,
     courseID INTEGER NOT NULL,
@@ -88,13 +96,13 @@ CREATE TABLE Teaches(
     timeSlotID INTEGER NOT NULL,
     PRIMARY KEY(insID,courseID,semester,year,timeSlotID),
     FOREIGN KEY(insID) REFERENCES Instructor(insID),
-    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year),
+    FOREIGN KEY(courseID,semester,year,timeSlotID) REFERENCES CourseOffering(courseID,semester,year,timeSlotID),
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
 
 
 /* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
-DROP TABLE IF EXISTS GradeMapping;
+-- DROP TABLE IF EXISTS GradeMapping;
 CREATE TABLE GradeMapping(
     grade VARCHAR(2) NOT NULL,
     val   INTEGER   NOT NULL,
@@ -112,7 +120,7 @@ INSERT INTO GradeMapping(grade, val)
           ('F', 5);
 /**/
 
-DROP TABLE IF EXISTS DeanAcademicsOfficeTicketTable;
+-- DROP TABLE IF EXISTS DeanAcademicsOfficeTicketTable;
 CREATE TABLE DeanAcademicsOfficeTicketTable(
     studentID INTEGER NOT NULL,
     studentTicketID INTEGER NOT NULL,
@@ -157,13 +165,9 @@ CREATE ROLE DeanAcademicsOffice with
     login password 'deanacademicsoffice';
 
 
-/* creating academic section (optional) */
-CREATE ROLE academicsection with 
-    LOGIN PASSWORD 'academicsection'
-    IN ROLE pg_read_server_files;
-
 /* Giving permission to DeanAcademicsOffice to read file */
 grant pg_read_server_files to DeanAcademicsOffice;
+
 
 /* giving SELECT permission on TimeSlot table to everyone */
 GRANT SELECT 
@@ -174,7 +178,7 @@ TO Students, Faculty, BatchAdvisor;
 /* giving all permissions on TimeSlot table to academicsection & DeanAcademicsOffice */
 GRANT ALL 
 ON TimeSlot 
-TO academicsection, DeanAcademicsOffice;
+TO DeanAcademicsOffice;
 
 
 /* Creating dummy student */
@@ -198,12 +202,15 @@ FROM PUBLIC;
 /* Now only academic section can use this procedure */
 GRANT EXECUTE 
 ON PROCEDURE upload_timetable_slots 
-TO academicsection, DeanAcademicsOffice;
+TO DeanAcademicsOffice;
 
+\c - deanacademicsoffice;
 
 /* uploading timetableslot */
 -- @login --with DeanAcademicsOffice
 call upload_timetable_slots();
+
+\c - postgres; 
 
 /* giving all permission on Coursecatalogue to deanacademicsoffice */
 GRANT ALL 
@@ -215,44 +222,108 @@ GRANT USAGE, SELECT
 ON ALL SEQUENCES IN SCHEMA public 
 TO DeanAcademicsOffice;
 
+
 /* inserting dummy courses */
 -- @login --with DeanAcademicsOffice
 INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C) 
-    VALUES('CS201', 3, 2, 1, 5, 4),
-          ('CS202', 3, 2, 1, 5, 3),
-          ('CS203', 3, 2, 1, 5, 4),
-          ('CS301', 3, 2, 1, 5, 4),
-          ('CS302', 3, 2, 1, 5, 3), 
-          ('CS303', 3, 2, 1, 5, 4);
+    VALUES('CS201', 3, 2, 1, 5, 4),('CS202', 3, 2, 1, 5, 3),
+          ('CS203', 3, 2, 1, 5, 4),('CS301', 3, 2, 1, 5, 4),
+          ('CS302', 3, 2, 1, 5, 3),('CS303', 3, 2, 1, 5, 4);
 
 
-/* API for faculty to float course */
-@login -- with deanacademics while creating 
-create or replace procedure offerCourse(
+/* Nobody will have permission to call this procedure directly */
+-- @login -- with deanacademics while creating 
+CREATE OR replace PROCEDURE InsertIntoTeaches(
+    IN _insID INTEGER,
     IN _courseID INTEGER, 
     IN _semester INTEGER,
     IN _year INTEGER,
-    IN _cgpa NUMERIC(4, 2)
+    IN allotedTimeSlotID INTEGER
 )
 language plpgsql SECURITY DEFINER
 as $$
 declare
-    cnt INTEGER = 0;
-begin
-    select count(*) into cnt 
-    from CourseCatalogue 
-    where CourseCatalogue.courseID = _courseID;
+BEGIN   
+    INSERT into Teaches(insID,courseID,semester,year,timeSlotID) 
+        values(_insID,_courseID,_semester,_year,allotedTimeSlotID);
+END; $$;
 
-    if cnt = 0 then 
+
+/* API for faculty to float course */
+-- @login -- with deanacademics while creating 
+-- only faculty can execute this procedure
+create or replace procedure offerCourse(
+    IN _courseID INTEGER, 
+    IN _semester INTEGER,
+    IN _year INTEGER,
+    IN _cgpa NUMERIC(4, 2),
+    IN _insID INTEGER,
+    IN _slotName VARCHAR(20),
+    IN _list_batches INTEGER[]
+) 
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    cnt INTEGER = 0;
+    courseOfferingExists INTEGER;
+    teachesExists INTEGER;
+    allotedTimeSlotID INTEGER = -1;
+    batch INTEGER;
+    courseOfferingID INTEGER;
+begin
+    SELECT count(*) INTO cnt 
+    FROM CourseCatalogue 
+    WHERE CourseCatalogue.courseID = _courseID;
+
+    IF cnt = 0 THEN 
         raise notice 'Course not in CourseCatalogue!!!';
         return;
-    end if;
+    END IF;
 
-    if _cgpa != NULL and (_cgpa > 10.0 or _cgpa < 0) THEN
+    IF _cgpa != NULL AND (_cgpa > 10.0 or _cgpa < 0.0) THEN
         raise notice 'Invalid CGPA value!!!';
         return;
-    end if;
+    END IF;
 
-    INSERT into CourseOffering(courseID, semester, year, cgpaRequired)
-        values(_courseID, _semester, _year, _cgpa);
-end; $$;
+    -- Finding the timeslotId
+    SELECT timeSlotID INTO allotedTimeSlotID
+    FROM TimeSlot 
+    WHERE TimeSlot.slotName = _slotName;
+
+    IF allotedTimeSlotID = -1 THEN 
+        raise notice 'TimeSlot does not exist!!!';
+        return;
+    END IF;
+
+    -- check if this course offering already exists or not
+    SELECT count(*) INTO courseOfferingExists
+    FROM CourseOffering
+    WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa AND CourseOffering.timeSlotID=allotedTimeSlotID;
+
+    IF courseOfferingExists=0 THEN 
+        INSERT INTO CourseOffering(courseID, semester, year, cgpaRequired,timeSlotID) VALUES(_courseID, _semester, _year, _cgpa,allotedTimeSlotID);
+    
+        -- Finding the courseOffering ID
+        SELECT CouseOffering.courseOfferingID INTO courseOfferingID
+        FROM CourseOffering
+        WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa AND CourseOffering.timeSlotID=allotedTimeSlotID;
+
+        FOREACH batch IN ARRAY _list_batches LOOP
+            INSERT INTO BatchesAllowed(CourseOfferingID,batch) VALUES(courseOfferingID,batch);
+        END LOOP;
+    END IF;
+
+    -- Check if there is a similar entry into the teaches table or not
+    SELECT count(*) INTO teachesExists
+    FROM Teaches
+    WHERE Teaches.courseID=_courseID AND Teaches.semester=_semester AND Teaches.year=_year AND Teaches.cgpa=_cgpa AND Teaches.insID=_insID AND Teaches.timeSlotID=allotedTimeSlotID;
+
+    IF teachesExists<>0 THEN
+        raise notice 'Course offering already exists!!!';
+        return;
+    END IF;
+
+    CALL InsertIntoTeaches(_insID,_courseID,_semester,_year,allotedTimeSlotID);
+END; $$;
+
+\c - postgres;

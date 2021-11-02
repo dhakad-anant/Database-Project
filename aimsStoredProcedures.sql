@@ -82,7 +82,7 @@ CREATE OR replace PROCEDURE InsertIntoTeaches(
     IN _year INTEGER,
     IN allotedTimeSlotID INTEGER
 )
-language plpgsql 
+language plpgsql SECURITY DEFINER
 as $$
 declare
 BEGIN   

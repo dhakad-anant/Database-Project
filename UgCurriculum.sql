@@ -51,7 +51,7 @@ begin
     -- Check if the student has done all the courses mentioned in its program core
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Program Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Program Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade=''A'' OR grade=''A-'' OR grade=''B'' OR grade=''B-'' OR grade=''C'' OR grade=''C-'')';
 
     for undoneProgramCore IN EXECUTE query LOOP
         break;
@@ -65,7 +65,7 @@ begin
     -- Check if the student has done all the courses mentioned in its program electives
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade=''A'' OR grade=''A-'' OR grade=''B'' OR grade=''B-'' OR grade=''C'' OR grade=''C-'')';
 
     for undoneProgramElective IN EXECUTE query LOOP
         break;
@@ -78,7 +78,7 @@ begin
 
     -- Check if the student has done all the courses mentioned in its science core
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade=''A'' OR grade=''A-'' OR grade=''B'' OR grade=''B-'' OR grade=''C'' OR grade=''C-'')';
 
     for undoneScienceCore IN EXECUTE query LOOP
         break;
@@ -92,7 +92,7 @@ begin
     -- Check if the student has done all the courses mentioned in its open electives
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Open Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Open Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade=''A'' OR grade=''A-'' OR grade=''B'' OR grade=''B-'' OR grade=''C'' OR grade=''C-'')';
 
     for undoneOpenElective IN EXECUTE query LOOP
         break;
