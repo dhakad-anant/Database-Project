@@ -163,10 +163,12 @@ GRANT SELECT
 ON TimeSlot    
 TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice;
 
+
 /* giving all permissions on TimeSlot table to academicsection */
 GRANT ALL 
 ON TimeSlot 
 TO academicsection;
+
 
 /* Creating dummy student */
 CREATE ROLE rahul with  
@@ -174,7 +176,8 @@ CREATE ROLE rahul with
     PASSWORD 'rahul'
     IN ROLE Students;
 
+
 /* uploading timetableslot */
--- @login with academicsection
+@login --with academicsection
 call upload_timetable_slots();
 

@@ -16,6 +16,7 @@ CREATE ROLE academicsection with
     LOGIN PASSWORD 'academicsection'
     IN ROLE pg_read_server_files;
 
+
 GRANT INSERT
 ON Teaches 
 TO Faculty;
@@ -36,6 +37,7 @@ TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice;
 GRANT ALL 
 ON TimeSlot 
 TO academicsection;
+
 
 /* Creating dummy student */
 CREATE ROLE rahul with  
