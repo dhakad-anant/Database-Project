@@ -57,7 +57,6 @@ create table BatchesAllowed(
     FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID)
 );
 
-
 CREATE TABLE Student(
     studentID serial PRIMARY KEY,
     batch INTEGER NOT NULL,

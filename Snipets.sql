@@ -9,39 +9,36 @@ REVOKE group_role FROM role1, ... ;
 Example: grant student,joe to student_login;
     revoke student,joe from student_login;
 
-/* 3. remove permission to access stored procedure */
+ 3. remove permission to access stored procedure 
 revoke all on procedure <procedure_name> from public;
 
 grant execute on procedure <procedure_name> to role;
 
+4. passing list as an argument to a stored procedure
+    create or replace procedure test(
+        in x integer[]
+    )
+    language plpgsql
+    as $$
+    declare
+    -- variable declaration
+        r integer;
+        count integer;
+        len integer;
+    begin
+        len:= array_length(x,1); -- to find the length of an array
+        raise notice 'Length of array is: %',len;
+        count:=0;
+        foreach r in array x loop
+            count=count+r;
+            raise notice '%',r;
+            end loop;
+        -- end if;
+        raise notice 'count is: %',count;
+    end; $$;
+    call test('{2,3}'::integer[]);
 
-create or replace procedure test(
-    -- in _name text,
-    -- inout _id integer
-    -- in value integer
-)
-language plpgsql SECURITY DEFINER
-as $$
-declare 
-    -- ans numeric(4,2);
-    tableName text;
-    query text;
-begin 
-    tableName:='department';
-    query= 'SELECT * FROM ' || tableName;
-    execute query;
-    -- select * from tableName;
-    -- INSERT into department(deptname) values(_name);
-    -- for rec in (select * from department)
-    -- loop
-    --     raise notice '% ', rec;
-    -- end loop;
-    -- -- select * from department;
-    -- ans:=-1;
-    -- raise notice 'value of ans %',ans;
-    -- call test2(value,ans);
-    -- raise notice 'value of ans %',ans;
-END; $$;
+
 
 create or replace procedure test(
     in _name text
