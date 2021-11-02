@@ -38,8 +38,6 @@ grant execute on procedure <procedure_name> to role;
     end; $$;
     call test('{2,3}'::integer[]);
 
-
-
 create or replace procedure test(
     in _name text
 )
