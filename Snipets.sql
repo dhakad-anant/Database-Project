@@ -9,7 +9,7 @@ REVOKE group_role FROM role1, ... ;
 Example: grant student,joe to student_login;
     revoke student,joe from student_login;
 
-3. remove permission to access stored procedure
+/* 3. remove permission to access stored procedure */
 revoke all on procedure <procedure_name> from public;
 
 grant execute on procedure <procedure_name> to role;

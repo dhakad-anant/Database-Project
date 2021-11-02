@@ -52,10 +52,12 @@ exit [label] [when boolean_expression]
 /* syntax for continue */
 continue [loop_label] [when condition]
 
+
 /* syntax for GRANT command */
 GRANT privilege_list | ALL 
 ON table_name 
 TO role_name;
+
 
 /* syntax for REVOKE command */
 REVOKE privilege_list | ALL
@@ -97,14 +99,17 @@ begin
 -- stored procedure body
 end; $$;
 
+
 /* syntax for calling a stored procedure */
 call stored_procedure_name(argument_list);
+
 
 /* syntax for triggers */
 CREATE TRIGGER trigger_name 
 {Before | After} { event }
 ON table_name 
 [For [Each] {Row | Statement}] EXECUTE PROCEDURE trigger_function;
+
 
 /* query for getting a list of stored procedure */
 select n.nspname as schema_name,

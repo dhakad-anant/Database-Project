@@ -74,6 +74,7 @@ END; $$;
 
 /* ************************************************************** */
 
+
 /* procedure to make a faculty a BatchAdvisor */
 create or replace procedure makeBatchAdvisor(
     IN _insID INTEGER,
@@ -90,6 +91,7 @@ begin
     query = 'UPDATE '|| tableName ||' SET insID = '|| _insID ||' where deptID = '||_deptID||';'
     EXECUTE query;
 end; $$;
+
 
 /* ----------------------------------------------------------- */
 /* Registering student */
@@ -376,6 +378,7 @@ begin
 end; $$;
 -- cgpa = (summation{no. of credits x grade_in_that_course})/totalCredits
 /****************************************************************************************** */
+
 
 
 /* Procedure for uploading grades of a particular (course, semester, year, instructor) */

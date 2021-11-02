@@ -149,7 +149,10 @@ end; $$;
 CREATE ROLE Students;
 CREATE ROLE Faculty;
 CREATE ROLE BatchAdvisor;
-CREATE ROLE DeanAcademicsOffice;
+
+drop role DeanAcademicsOffice;
+CREATE ROLE DeanAcademicsOffice with 
+    login password 'deanacademicsoffice';
 
 
 /* creating academic section (optional) */
@@ -157,17 +160,19 @@ CREATE ROLE academicsection with
     LOGIN PASSWORD 'academicsection'
     IN ROLE pg_read_server_files;
 
+/* Giving permission to DeanAcademicsOffice to read file */
+grant pg_read_server_files to DeanAcademicsOffice;
 
 /* giving SELECT permission on TimeSlot table to everyone */
 GRANT SELECT 
 ON TimeSlot    
-TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice;
+TO Students, Faculty, BatchAdvisor;
 
 
-/* giving all permissions on TimeSlot table to academicsection */
+/* giving all permissions on TimeSlot table to academicsection & DeanAcademicsOffice */
 GRANT ALL 
 ON TimeSlot 
-TO academicsection;
+TO academicsection, DeanAcademicsOffice;
 
 
 /* Creating dummy student */
@@ -176,8 +181,37 @@ CREATE ROLE rahul with
     PASSWORD 'rahul'
     IN ROLE Students;
 
+/* Creating dummy faculty */
+CREATE ROLE puneetgoyal with  
+    LOGIN 
+    PASSWORD 'puneetgoyal'
+    IN ROLE Faculty;
+
+/* revoking all permissions on procedure from public */
+REVOKE ALL 
+ON PROCEDURE upload_timetable_slots 
+FROM PUBLIC;
+
+/* Now only academic section can use this procedure */
+GRANT EXECUTE 
+ON PROCEDURE upload_timetable_slots 
+TO academicsection, DeanAcademicsOffice;
+
 
 /* uploading timetableslot */
-@login --with academicsection
+@login --with DeanAcademicsOffice
 call upload_timetable_slots();
+
+
+/* inserting dummy courses */
+@login --with DeanAcademicsOffice
+INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C) 
+    VALUES('CS201', 3, 2, 1, 5, 4),
+          ('CS202', 3, 2, 1, 5, 3),
+          ('CS203', 3, 2, 1, 5, 4),
+          ('CS301', 3, 2, 1, 5, 4),
+          ('CS302', 3, 2, 1, 5, 3), 
+          ('CS303', 3, 2, 1, 5, 4);
+
+
 
