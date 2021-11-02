@@ -29,7 +29,7 @@ grant execute on procedure <procedure_name> to role;
         len:= array_length(x,1); -- to find the length of an array
         raise notice 'Length of array is: %',len;
         count:=0;
-        foreach r in array x loop
+        foreach r in ARRAY x loop
             count=count+r;
             raise notice '%',r;
             end loop;

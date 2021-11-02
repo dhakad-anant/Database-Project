@@ -47,7 +47,8 @@ CREATE TABLE CourseOffering(
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     cgpaRequired NUMERIC(4, 2),
-    PRIMARY KEY(courseID,semester,year),
+    timeSlotID INTEGER NOT NULL,
+    PRIMARY KEY(courseID,semester,year,timeSlotID),
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 

@@ -5,8 +5,8 @@ create or replace procedure offerCourse(
     IN _year INTEGER,
     IN _cgpa NUMERIC(4, 2),
     IN _insID INTEGER,
-    IN slotName VARCHAR(20),
-    IN list_batches INTEGER[]
+    IN _slotName VARCHAR(20),
+    IN _list_batches INTEGER[]
 )
 language plpgsql SECURITY DEFINER
 as $$
@@ -18,98 +18,74 @@ declare
     batch INTEGER;
     courseOfferingID INTEGER;
 begin
-    select count(*) into cnt 
-    from CourseCatalogue 
-    where CourseCatalogue.courseID = _courseID;
+    SELECT count(*) INTO cnt 
+    FROM CourseCatalogue 
+    WHERE CourseCatalogue.courseID = _courseID;
 
-    if cnt = 0 then 
+    IF cnt = 0 THEN 
         raise notice 'Course not in CourseCatalogue!!!';
         return;
-    end if;
+    END IF;
 
-    if _cgpa != NULL and (_cgpa > 10.0 or _cgpa < 0) THEN
+    IF _cgpa != NULL AND (_cgpa > 10.0 or _cgpa < 0.0) THEN
         raise notice 'Invalid CGPA value!!!';
         return;
-    end if;
+    END IF;
+
+    -- Finding the timeslotId
+    SELECT timeSlotID INTO allotedTimeSlotID
+    FROM TimeSlot 
+    WHERE TimeSlot.slotName = _slotName;
+
+    IF allotedTimeSlotID = -1 THEN 
+        raise notice 'TimeSlot does not exist!!!';
+        return;
+    END IF;
 
     -- check if this course offering already exists or not
     SELECT count(*) INTO courseOfferingExists
     FROM CourseOffering
-    WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa;
+    WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa AND CourseOffering.timeSlotID=allotedTimeSlotID;
 
-    if courseOfferingExists=0 then 
-        INSERT INTO CourseOffering(courseID, semester, year, cgpaRequired) VALUES(_courseID, _semester, _year, _cgpa);
+    IF courseOfferingExists=0 THEN 
+        INSERT INTO CourseOffering(courseID, semester, year, cgpaRequired,timeSlotID) VALUES(_courseID, _semester, _year, _cgpa,allotedTimeSlotID);
     
         -- Finding the courseOffering ID
         SELECT CouseOffering.courseOfferingID INTO courseOfferingID
         FROM CourseOffering
-        WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa;
+        WHERE CourseOffering.courseID=_courseID AND CourseOffering.semester=_semester AND CourseOffering.year=_year AND CourseOffering.cgpa=_cgpa AND CourseOffering.timeSlotID=allotedTimeSlotID;
 
-        foreach batch IN ARRAY list_batches LOOP
+        FOREACH batch IN ARRAY _list_batches LOOP
             INSERT INTO BatchesAllowed(CourseOfferingID,batch) VALUES(courseOfferingID,batch);
-        end loop;
-    end if;
+        END LOOP;
+    END IF;
 
-    -- Finding the timeslotId
-    select timeSlotID into allotedTimeSlotID
-    from TimeSlot 
-    where TimeSlot.slotName = slotName;
-
-    if allotedTimeSlotID = -1 then 
-        raise notice 'TimeSlot does not exist!!!';
-        return;
-    end if;
     -- Check if there is a similar entry into the teaches table or not
-    select count(*) into teachesExists
-    from Teaches
-    where Teaches.courseID=_courseID and Teaches.semester=_semester and Teaches.year=_year and Teaches.cgpa=_cgpa and Teaches.insID=_insID and Teaches.timeSlotID=allotedTimeSlotID;
+    SELECT count(*) INTO teachesExists
+    FROM Teaches
+    WHERE Teaches.courseID=_courseID AND Teaches.semester=_semester AND Teaches.year=_year AND Teaches.cgpa=_cgpa AND Teaches.insID=_insID AND Teaches.timeSlotID=allotedTimeSlotID;
 
-    if teachesExists<>0 then
+    IF teachesExists<>0 THEN
         raise notice 'Course offering already exists!!!';
         return;
-    end if;
+    END IF;
 
-    call InsertIntoTeaches(_insID,_courseID,_semester,_year,allotedTimeSlotID);
-end; $$;
+    CALL InsertIntoTeaches(_insID,_courseID,_semester,_year,allotedTimeSlotID);
+END; $$;
 /* ********************************************************************** */
 
-
 /* insert into teaches */
-create or replace procedure InsertIntoTeaches(
+CREATE OR replace PROCEDURE InsertIntoTeaches(
     IN _insID INTEGER,
     IN _courseID INTEGER, 
-    -- IN _sectionID INTEGER,
     IN _semester INTEGER,
     IN _year INTEGER,
-    -- IN slotName VARCHAR(20)
-    IN allotedTimeSlotID INTEGER;
+    IN allotedTimeSlotID INTEGER
 )
-language plpgsql
+language plpgsql 
 as $$
 declare
-    -- cnt INTEGER = 0;
-    -- allotedTimeSlotID INTEGER = -1;
 BEGIN   
-    -- select count(*) into cnt 
-    -- from CourseOffering 
-    -- where CourseOffering.courseID = _courseID AND
-    --     CourseOffering.semester = _semester AND
-    --     CourseOffering.year = _year;
-
-    -- if cnt = 0 then 
-    --     raise notice 'Course offering does not exist!!!';
-    --     return;
-    -- end if;
-
-    -- select timeSlotID into allotedTimeSlotID
-    -- from TimeSlot 
-    -- where TimeSlot.slotName = slotName;
-
-    -- if allotedTimeSlotID = -1 then 
-    --     raise notice 'TimeSlot does not exist!!!';
-    --     return;
-    -- end if;
-
     INSERT into Teaches(insID,courseID,semester,year,timeSlotID) 
         values(_insID,_courseID,_semester,_year,allotedTimeSlotID);
 END; $$;

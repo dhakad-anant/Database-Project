@@ -1,5 +1,5 @@
 create or replace procedure canGraduate(
-    IN _studentID  integer;
+    IN _studentID  INTEGER;
 )
 language plpgsql
 as $$
@@ -8,8 +8,8 @@ declare
     deptID INTEGER;
     curriculumID INTEGER;
     batch INTEGER;
-    transcriptTable text;
-    curriculumList text;
+    transcriptTable TEXT;
+    curriculumList TEXT;
     undoneProgramCore INTEGER;
     undoneProgramElective INTEGER;
     undoneScienceCore INTEGER;
@@ -33,7 +33,7 @@ begin
     -- Check if the student has a minimum of 5 CGPA or not
     call calculate_current_CGPA(_studentID,currentCGPA);
     if currentCGPA<5.0 then
-        raise notice 'CGPA criteria not satisfied!!!';
+        raise notice 'CGPA criteria not satisfied as per the UG Curriculum!!!';
         return;
     end if;
 
@@ -46,12 +46,12 @@ begin
     curriculumList:= 'CurriculumList_' || curriculumID::text;
 
     -- transcript table of the student
-    transcriptTable:= 'Transcript_' || studentID::text;
+    transcriptTable:= 'Transcript_' || _studentID::text;
     
     -- Check if the student has done all the courses mentioned in its program core
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Program Core'' AND courseID NOT IN (SELECT courseID FROM ' || tableName || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Program Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
 
     for undoneProgramCore in EXECUTE query loop
         break;
@@ -65,7 +65,7 @@ begin
     -- Check if the student has done all the courses mentioned in its program electives
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' AND courseID NOT IN (SELECT courseID FROM ' || tableName || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
 
     for undoneProgramElective in EXECUTE query loop
         break;
@@ -78,7 +78,7 @@ begin
 
     -- Check if the student has done all the courses mentioned in its science core
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' AND courseID NOT IN (SELECT courseID FROM ' || tableName || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
 
     for undoneScienceCore in EXECUTE query loop
         break;
@@ -92,7 +92,7 @@ begin
     -- Check if the student has done all the courses mentioned in its open electives
 
     query:= 'SELECT count(*) FROM ' || curriculumList ||
-    ' WHERE ' || curriculumList|| '.courseCategory=''Open Elective'' AND courseID NOT IN (SELECT courseID FROM ' || tableName || ' WHERE grade<>''F'' AND grade<>''NULL'')';
+    ' WHERE ' || curriculumList|| '.courseCategory=''Open Elective'' AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' WHERE grade<>''F'' AND grade<>''NULL'')';
 
     for undoneOpenElective in EXECUTE query loop
         break;
@@ -104,5 +104,4 @@ begin
     end if;
 
     raise notice 'Congratulations! You are eligible to graduate.';
-
 end; $$;
