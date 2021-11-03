@@ -90,7 +90,8 @@ CREATE TABLE GradeMapping(
 /* @Dynamic Table */
 CREATE TABLE FacultyGradeTable_{sectionID}(
     studentID integer not null,
-    grade VARCHAR(2)
+    grade VARCHAR(2),
+    PRIMARY KEY(studentID)
 );
 /* @Dynamic Table */
 CREATE TABLE Transcript_{studentID}(

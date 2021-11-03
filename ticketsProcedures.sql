@@ -9,7 +9,7 @@ create or replace procedure raiseTicket(
     IN _year INTEGER,
     IN _timeSlotID INTEGER
 )
-language plpgsql
+language plpgsql SECURITY DEFINER
 as $$
 declare
     tableName text;
@@ -31,7 +31,7 @@ BEGIN
                     timeSlotID = $5';
 
     for cnt in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
-        break;
+        exit;
     end loop;
     if cnt != 0 then 
         raise notice 'Ticket is already raised !!!';
@@ -53,7 +53,7 @@ BEGIN
                     timeSlotID = $5';
 
     for _studentTicketID in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
-        break;
+        exit;
     end loop;
 
     /* inserting into Faculty Ticket Table */

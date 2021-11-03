@@ -16,3 +16,6 @@
 12. once dean academics verdict changes to yes, write code in the update function of dean academics
 13. list of batches eliglible to register for a courseoffering
 14. figure out how to print the list having values as null
+
+15. trigger for faculty grade table automating marks updating in transcript table of student
+16. make section id in teaches and courseofferingId in courseoffering as serial

@@ -147,7 +147,7 @@ create or replace procedure RegisterStudent(
     IN _insName VARCHAR(50),
     IN _slotName VARCHAR(20)
 )
-language plpgsql
+language plpgsql SECURITY DEFINER
 as $$
 declare 
     studentTrancriptTableName text;
@@ -340,6 +340,14 @@ begin
     EXECUTE query;
 
 end; $$; 
+REVOKE ALL 
+ON PROCEDURE RegisterStudent
+FROM PUBLIC;
+
+GRANT EXECUTE 
+ON PROCEDURE RegisterStudent 
+TO students;
+
 /* ----------------------------------------------------------- */
 
 
