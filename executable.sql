@@ -14,7 +14,16 @@ CREATE TABLE CourseCatalogue(
     C Numeric(4,2) NOT NULL
 );
 
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES
+    (1,'CS201',3,1,2,6,4),
+    (2,'CS202',3,1,2,6,4),
+    (3,'CS203',3,1,3,6,4),
 
+    (4,'CS301',3,1,2,6,4),
+    (5,'CS302',3,1,0,5,3),
+    (6,'CS303',3,1,2,6,4);
+
+-- select * from CourseCatalogue;
 -- DROP TABLE IF EXISTS PreRequisite;
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
@@ -23,13 +32,19 @@ CREATE TABLE PreRequisite(
     FOREIGN KEY(preReqCourseID) REFERENCES CourseCatalogue(courseID) ON DELETE CASCADE
 );
 
+INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES
+    (4,1),
+    (5,2),
+    (6,3);
+
+-- select * from PreRequisite;
 
 -- DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
     deptID INTEGER PRIMARY KEY,
     deptName VARCHAR(20) NOT NULL UNIQUE
 );
-
+INSERT INTO Department(deptID, deptName) values (1, 'CSE'),(2, 'EE'),(3, 'ME'),(4, 'MNC');
 
 -- DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
@@ -39,6 +54,12 @@ CREATE TABLE Instructor(
     FOREIGN key(deptID) REFERENCES Department(deptID)
 );
 
+INSERT INTO Instructor(insID,insName, deptID) VALUES 
+    (1, 'Viswanath Gunturi',1), 
+    (2, 'Brijesh Kumbhani',2), 
+    (3, 'Apurva Mudgal',1),
+    (4, 'Balwinder Sodhi',1);
+-- select * from Instructor;
 
 -- DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
@@ -54,82 +75,6 @@ CREATE TABLE TimeSlot(
     
     PRIMARY KEY(timeSlotID)
 );
-
-
--- DROP TABLE IF EXISTS CourseOffering;
-CREATE TABLE CourseOffering(
-    courseOfferingID INTEGER PRIMARY KEY,
-    courseID INTEGER NOT NULL,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    cgpaRequired NUMERIC(4, 2),
-    timeSlotID INTEGER NOT NULL,
-    -- PRIMARY KEY(courseID,semester,year,timeSlotID),
-    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
-);
-
--- DROP TABLE IF EXISTS BatchesAllowed;
-CREATE TABLE BatchesAllowed(
-    CourseOfferingID INTEGER NOT NULL,
-    Batch INTEGER NOT NULL
-    /* FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID) */
-);
-
--- DROP TABLE IF EXISTS Student;
-CREATE TABLE Student(
-    studentID INTEGER PRIMARY KEY,
-    batch INTEGER NOT NULL,
-    deptID INTEGER not NULL,
-    entryNumber varchar(30) not null,
-    Name VARCHAR(50) NOT NULL,
-    FOREIGN key(deptID) REFERENCES Department(deptID) 
-);
-
-
--- DROP TABLE IF EXISTS Teaches;
-CREATE TABLE Teaches(
-    insID INTEGER NOT NULL,
-    courseID INTEGER NOT NULL,
-    sectionID INTEGER UNIQUE,
-    semester INTEGER NOT NULL,
-    year INTEGER NOT NULL,
-    timeSlotID INTEGER NOT NULL,
-    PRIMARY KEY(insID,courseID,semester,year,timeSlotID),
-    FOREIGN KEY(insID) REFERENCES Instructor(insID),
-    FOREIGN KEY(courseID,semester,year,timeSlotID) REFERENCES CourseOffering(courseID,semester,year,timeSlotID),
-    FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
-);  
-
-
-/* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
--- DROP TABLE IF EXISTS GradeMapping;
-CREATE TABLE GradeMapping(
-    grade VARCHAR(2) NOT NULL,
-    val   INTEGER   NOT NULL,
-    PRIMARY KEY(grade)
-);
-
-
-/* INSERTING GradeMapping ROWS */
-INSERT INTO GradeMapping(grade, val)
-    values('A', 10),
-          ('B', 9),
-          ('C', 8),
-          ('D', 7),
-          ('E', 6),
-          ('F', 5);
-/**/
-
--- DROP TABLE IF EXISTS DeanAcademicsOfficeTicketTable;
-CREATE TABLE DeanAcademicsOfficeTicketTable(
-    studentID INTEGER NOT NULL,
-    studentTicketID INTEGER NOT NULL,
-    facultyVerdict BOOLEAN,
-    BatchAdvisorVerdict BOOLEAN,
-    DeanAcademicsOfficeVerdict BOOLEAN,
-    PRIMARY KEY(studentID, studentTicketID)
-);
-
 
 /* CREATING STORED FOR uploading TimeTable for a semester */
 create or replace procedure upload_timetable_slots()
@@ -153,6 +98,173 @@ begin
               CSV HEADER;';
     EXECUTE QUERY;
 end; $$;
+
+call upload_timetable_slots();
+-- select * from TimeSlot;
+
+-- DROP TABLE IF EXISTS CourseOffering;
+CREATE TABLE CourseOffering(
+    courseOfferingID INTEGER,
+    courseID INTEGER NOT NULL,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    cgpaRequired NUMERIC(4, 2),
+    timeSlotID INTEGER NOT NULL,
+    PRIMARY KEY(courseID,semester,year,timeSlotID),
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+);
+
+INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,cgpaRequired,timeSlotID) VALUES (1,4,1,3,7.5,1);
+INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,timeSlotID) VALUES (2,5,1,3,2);
+INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,timeSlotID) VALUES (3,6,1,3,1);
+-- select * from courseOffering;
+
+-- DROP TABLE IF EXISTS BatchesAllowed;
+CREATE TABLE BatchesAllowed(
+    CourseOfferingID INTEGER NOT NULL,
+    Batch INTEGER NOT NULL
+    /* FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID) */
+);
+
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES
+    (1,2019), 
+    (2,2019);
+
+-- select * from BatchesAllowed;
+
+-- DROP TABLE IF EXISTS Student;
+CREATE TABLE Student(
+    studentID INTEGER PRIMARY KEY,
+    batch INTEGER NOT NULL,
+    deptID INTEGER not NULL,
+    entryNumber varchar(30) not null,
+    Name VARCHAR(50) NOT NULL,
+    FOREIGN key(deptID) REFERENCES Department(deptID) 
+);
+
+/* *************   TRIGGER - on inserting an entry in student table ********************************************/
+CREATE or replace FUNCTION postInsertingStudent_trigger_function(
+)
+returns TRIGGER
+language plpgsql
+as $$
+declare
+    tableName   text;
+    query       text;
+    studentID INTEGER;
+begin
+    studentID:= NEW.studentID;
+    raise notice 'Current student Id : %',studentID;
+    /* Create transcript table for each student */
+    tableName := 'Transcript_' || studentID::text;
+    query := 'CREATE TABLE ' || tableName;
+    query := query || '
+        (
+            courseID INTEGER NOT NULL,
+            semester INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            grade VARCHAR(2),
+            timeSlotID INTEGER NOT NULL,
+            PRIMARY KEY(courseID, semester, year),
+            FOREIGN KEY(courseID, semester, year,timeSlotID) REFERENCES CourseOffering(courseID, semester, year,timeslotID)
+        );';
+    
+    EXECUTE query;
+
+    /* Create seperate ticket table for each student */
+    tableName := 'StudentTicketTable_' || new.studentID::text;
+    query := 'CREATE TABLE ' || tableName;
+    query := query || '
+        (
+            insID INTEGER NOT NULL,
+            courseID INTEGER NOT NULL,
+            semester INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            timeSlotID INTEGER NOT NULL,
+            ticketID SERIAL, 
+            facultyVerdict BOOLEAN,
+            batchAdvisorVerdict BOOLEAN,
+            deanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
+        );';
+    
+    EXECUTE query; -- transcript table created
+
+    return new;
+    -- handle permissions
+    -- student(read only), dean(read & write), 
+end; $$;  
+
+CREATE TRIGGER postInsertingStudent
+after insert on Student 
+FOR EACH ROW
+EXECUTE PROCEDURE postInsertingStudent_trigger_function();
+
+drop trigger postInsertingStudent on student;
+drop function postInsertingStudent_trigger_function();
+-- drop table student;
+/* ********************************************************************************************************** */
+
+INSERT INTO Student(studentID,batch,deptID,entryNumber,Name) VALUES
+    (1,2019,1,'2019CSB1070','A'),
+    (2,2019,2,'2019EEB1107','B'),
+    (3,2019,3,'2019MEB1130','C'),
+    (4,2018,1,'2018CSB1070','AA'),
+    (5,2018,2,'2018EEB1107','BB'),
+    (6,2018,3,'2018MEB1130','CC');
+
+--  need to make their transcript and add courses also
+-- select * from student;
+
+-- DROP TABLE IF EXISTS Teaches;
+CREATE TABLE Teaches(
+    insID INTEGER NOT NULL,
+    courseID INTEGER NOT NULL,
+    sectionID INTEGER UNIQUE,
+    semester INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    timeSlotID INTEGER NOT NULL,
+    PRIMARY KEY(insID,courseID,semester,year,timeSlotID),
+    FOREIGN KEY(insID) REFERENCES Instructor(insID),
+    FOREIGN KEY(courseID,semester,year,timeSlotID) REFERENCES CourseOffering(courseID,semester,year,timeSlotID),
+    FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
+);  
+
+INSERT INTO Teaches(insID,CourseID,sectionID,semester,year,timeSlotID) VALUES
+    (1,4,1,1,3,1),
+    (2,5,2,1,3,2),
+    (4,6,3,1,3,1);
+-- select * from teaches;
+/* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
+-- DROP TABLE IF EXISTS GradeMapping;
+CREATE TABLE GradeMapping(
+    grade VARCHAR(2) NOT NULL,
+    val   INTEGER   NOT NULL,
+    PRIMARY KEY(grade)
+);
+
+
+/* INSERTING GradeMapping ROWS */
+INSERT INTO GradeMapping(grade, val)
+    values('A', 10),
+          ('B', 9),
+          ('C', 8),
+          ('D', 7),
+          ('E', 6),
+          ('F', 5);
+/**/
+-- select * from GradeMapping;
+-- DROP TABLE IF EXISTS DeanAcademicsOfficeTicketTable;
+CREATE TABLE DeanAcademicsOfficeTicketTable(
+    studentID INTEGER NOT NULL,
+    studentTicketID INTEGER NOT NULL,
+    facultyVerdict BOOLEAN,
+    BatchAdvisorVerdict BOOLEAN,
+    DeanAcademicsOfficeVerdict BOOLEAN,
+    PRIMARY KEY(studentID, studentTicketID)
+);
+
+
 
 
 /* CREATING MAJOR STAKEHOLDER ROLES */
