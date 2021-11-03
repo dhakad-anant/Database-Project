@@ -39,12 +39,63 @@ INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES
 
 -- select * from PreRequisite;
 
+
+
 -- DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
     deptID INTEGER PRIMARY KEY,
     deptName VARCHAR(20) NOT NULL UNIQUE
 );
+/* Creating BatchAdvisor through Trigger on insert in Department */
+CREATE or replace FUNCTION postInsertingDepartment_trigger_function(
+)
+returns TRIGGER
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName   text;
+    query       text;
+begin
+    tableName := 'BatchAdvisor_' || NEW.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            insID INTEGER,
+            deptID INTEGER NOT NULL,
+            PRIMARY KEY(deptID)
+        );';
+    EXECUTE query; 
+
+    query := 'INSERT INTO ' || tableName || '(insID, deptID) values('||NULL||','||NEW.deptID||')';
+    EXECUTE query;
+
+    tableName := 'BatchAdvisorTicketTable_' || NEW.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            studentID INTEGER NOT NULL,
+            studentTicketID INTEGER NOT NULL,
+            facultyVerdict BOOLEAN,
+            BatchAdvisorVerdict BOOLEAN,
+            DeanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(studentID, studentTicketID)
+        );';
+    EXECUTE query; 
+
+    return new;
+end; $$; 
+
+CREATE TRIGGER postInsertingDepartment
+AFTER INSERT ON Department 
+For each STATEMENT 
+EXECUTE PROCEDURE postInsertingDepartment_trigger_function();
+
+-- drop trigger postInsertingDepartment;
+-- drop function postInsertingDepartment_trigger_function;
+-- drop table Department;
+/* ************************************************************************ */
 INSERT INTO Department(deptID, deptName) values (1, 'CSE'),(2, 'EE'),(3, 'ME'),(4, 'MNC');
+
+
+
 
 -- DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
@@ -54,12 +105,52 @@ CREATE TABLE Instructor(
     FOREIGN key(deptID) REFERENCES Department(deptID)
 );
 
+/* On adding a new instructor to the instructor table, we create a seperate ticket table for each faculty */
+CREATE or replace FUNCTION postInsertingInstructor_trigger_function(
+)
+returns TRIGGER
+language plpgsql
+as $$
+declare
+    -- variable declaration
+    tableName   text;
+    query       text;
+begin
+
+    tableName := 'FacultyTicketTable__' || new.insID::text;
+    query := 'CREATE TABLE ' || tableName;
+    query := query || '
+        (
+            studentID INTEGER NOT NULL,
+            studentTicketID INTEGER NOT NULL,
+            facultyVerdict BOOLEAN,
+            BatchAdvisorVerdict BOOLEAN,
+            DeanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(studentID, studentTicketID)
+        );';
+    
+    EXECUTE query; 
+    return new;
+end; $$; 
+
+CREATE TRIGGER postInsertingInstructor
+after insert on Instructor 
+For each STATEMENT 
+EXECUTE PROCEDURE postInsertingInstructor_trigger_function();
+
+-- drop trigger postInsertingInstructor;
+-- drop function postInsertingInstructor_trigger_function;
+-- drop table Instructor;
+/* ************************************************************************ */
 INSERT INTO Instructor(insID,insName, deptID) VALUES 
     (1, 'Viswanath Gunturi',1), 
     (2, 'Brijesh Kumbhani',2), 
     (3, 'Apurva Mudgal',1),
     (4, 'Balwinder Sodhi',1);
 -- select * from Instructor;
+
+
+
 
 -- DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
@@ -131,6 +222,7 @@ INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES
     (2,2019);
 
 -- select * from BatchesAllowed;
+
 
 -- DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
