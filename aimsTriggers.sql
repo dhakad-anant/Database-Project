@@ -133,7 +133,7 @@ EXECUTE PROCEDURE postInsertingDepartment_trigger_function();
 CREATE or replace FUNCTION postInsertingDepartment_trigger_function(
 )
 returns TRIGGER
-language plpgsql
+language plpgsql SECURITY DEFINER
 as $$
 declare
     tableName   text;

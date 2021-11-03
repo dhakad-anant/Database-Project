@@ -5,7 +5,7 @@ CREATE DATABASE aims;
 
 -- DROP TABLE IF EXISTS CourseCatalogue;
 CREATE TABLE CourseCatalogue(
-    courseID SERIAL PRIMARY KEY,
+    courseID INTEGER PRIMARY KEY,
     courseCode VARCHAR(10) NOT NULL,
     L INTEGER NOT NULL,
     T INTEGER NOT NULL,
@@ -26,14 +26,14 @@ CREATE TABLE PreRequisite(
 
 -- DROP TABLE IF EXISTS Department;
 CREATE TABLE Department(
-    deptID SERIAL PRIMARY KEY,
+    deptID INTEGER PRIMARY KEY,
     deptName VARCHAR(20) NOT NULL UNIQUE
 );
 
 
 -- DROP TABLE IF EXISTS Instructor;
 CREATE TABLE Instructor(
-    insID SERIAL PRIMARY KEY,
+    insID INTEGER PRIMARY KEY,
     insName VARCHAR(50) NOT NULL,
     deptID INTEGER not NULL,
     FOREIGN key(deptID) REFERENCES Department(deptID)
@@ -58,13 +58,13 @@ CREATE TABLE TimeSlot(
 
 -- DROP TABLE IF EXISTS CourseOffering;
 CREATE TABLE CourseOffering(
-    courseOfferingID SERIAL,
+    courseOfferingID INTEGER PRIMARY KEY,
     courseID INTEGER NOT NULL,
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     cgpaRequired NUMERIC(4, 2),
     timeSlotID INTEGER NOT NULL,
-    PRIMARY KEY(courseID,semester,year,timeSlotID),
+    -- PRIMARY KEY(courseID,semester,year,timeSlotID),
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
@@ -77,7 +77,7 @@ CREATE TABLE BatchesAllowed(
 
 -- DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
-    studentID serial PRIMARY KEY,
+    studentID INTEGER PRIMARY KEY,
     batch INTEGER NOT NULL,
     deptID INTEGER not NULL,
     entryNumber varchar(30) not null,
@@ -90,7 +90,7 @@ CREATE TABLE Student(
 CREATE TABLE Teaches(
     insID INTEGER NOT NULL,
     courseID INTEGER NOT NULL,
-    sectionID SERIAL,
+    sectionID INTEGER UNIQUE,
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     timeSlotID INTEGER NOT NULL,
@@ -229,6 +229,60 @@ INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C)
     VALUES('CS201', 3, 2, 1, 5, 4),('CS202', 3, 2, 1, 5, 3),
           ('CS203', 3, 2, 1, 5, 4),('CS301', 3, 2, 1, 5, 4),
           ('CS302', 3, 2, 1, 5, 3),('CS303', 3, 2, 1, 5, 4);
+
+
+/* Trigger which generates batchAdvisor table its ticket table */
+-- @login -- with "ADMIN" WHILE CREATING 
+CREATE TRIGGER postInsertingDepartment
+AFTER INSERT ON Department 
+For each STATEMENT 
+EXECUTE PROCEDURE postInsertingDepartment_trigger_function();
+
+CREATE or replace FUNCTION postInsertingDepartment_trigger_function(
+)
+returns TRIGGER
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName   text;
+    query       text;
+begin
+    tableName := 'BatchAdvisor_' || new.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            insID INTEGER,
+            deptID INTEGER NOT NULL,
+            PRIMARY KEY(deptID)
+        );';
+    EXECUTE query; 
+
+    query := 'INSERT INTO ' || tableName || '(insID, deptID) values('||NULL||','||new.deptID||')';
+    EXECUTE query;
+
+    tableName := 'BatchAdvisorTicketTable_' || new.deptID::text;
+    query := 'CREATE TABLE ' || tableName || '
+        (
+            studentID INTEGER NOT NULL,
+            studentTicketID INTEGER NOT NULL,
+            facultyVerdict BOOLEAN,
+            BatchAdvisorVerdict BOOLEAN,
+            DeanAcademicsOfficeVerdict BOOLEAN,
+            PRIMARY KEY(studentID, studentTicketID)
+        );';
+    EXECUTE query; 
+
+    return new;
+end; $$; 
+
+
+
+
+-- @login -- with DeanAcademicsOffice
+INSERT INTO Department(deptID, deptName)
+    values (1, 'CSE'),(2, 'EE'),(3, 'ME'),(4, 'MNC');
+
+
+
 
 
 /* Nobody will have permission to call this procedure directly */
