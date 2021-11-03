@@ -194,14 +194,14 @@ INSERT INTO Instructor(insID,insName, deptID) VALUES
 -- DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
     timeSlotID INTEGER NOT NULL,
-    slotName varchar(20) UNIQUE,
+    slotName varchar(20) UNIQUE NOT NULL,
     duration integer NOT NULL, -- in minutes
 
-    monday varchar(20) not null,
-    tuesday varchar(20) not null,
-    wednesday varchar(20) not null,
-    thursday varchar(20) not null,
-    friday varchar(20) not null,
+    monday varchar(20),
+    tuesday varchar(20),
+    wednesday varchar(20),
+    thursday varchar(20),
+    friday varchar(20),
     
     PRIMARY KEY(timeSlotID)
 );
@@ -268,7 +268,7 @@ CREATE TABLE Student(
     studentID INTEGER PRIMARY KEY,
     batch INTEGER NOT NULL,
     deptID INTEGER not NULL,
-    entryNumber varchar(30) not null,
+    entryNumber varchar(30) not null UNIQUE,
     Name VARCHAR(50) NOT NULL,
     FOREIGN key(deptID) REFERENCES Department(deptID) 
 );

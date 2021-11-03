@@ -1,24 +1,19 @@
-1. add dynamic table for ug curriculum list in postinsertdepartment trigger
 2. add 2 stored procedure for viewing and adding courses to the CourseCatalogue table
         name of the procedure: viewCourseCatalogue and updateCourseCatalogue
-3. make the deptName unique in the department table
-4. update time slot table, add not null to slotName, days can be NULL instead of not NULL
-5. add unique to the entryNumber attribute of the student table
-        add name to the student table
-6. implement printGradeSheet stored procedure
-7. implement triggers for ticket propogation
-8. implement the stored procedure uploadCourseGrades
-8. implement the stored procedure canGraduate
-9. correct the notion of batch advisor (if time permits) but this would contradict the doc
-10. see the permissions aspect for this code
+6. ********************implement printGradeSheet stored procedure (Report generation)
+10. ****************see the permissions aspect for this code
 11. Security: implement this feature that the batch advisor can access the table of his own department only 
         i.e. CS advisor cannot access EE batch advisor table
-12. once dean academics verdict changes to yes, write code in the update function of dean academics
-13. list of batches eliglible to register for a courseoffering
-14. figure out how to print the list having values as null
-
-15. trigger for faculty grade table automating marks updating in transcript table of student
+12. ****************once dean academics verdict changes to yes, write code in the update function of dean academics and copy this code to executable file
+13. generate queries for test cases
+14. **************raise ticket only when credit limit has been exceeded credit-limit and the course-offering-restrictions,
+15. correct formatting of the view functions
 16. make section id in teaches and courseofferingId in courseoffering as serial
-
+18. ****************The course catalogue can be edited only by the Dean Academics office.
+19. ****************A student can see only his/her grades. But a faculty or Dean Academics office can see all the grades.
+20. **************** make a procedure to print current cgpa
+21. ***************** create a login role for student in postinsertingstudent
 
 unnecessary things to create just in case you have some extra time to kill:
+9. correct the notion of batch advisor (if time permits) but this would contradict the doc
+17. make ticket propogation sequential
