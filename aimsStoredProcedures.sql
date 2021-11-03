@@ -6,7 +6,7 @@ declare
     filepath    text;
     query    text;
 begin
-    filepath := '''C:\fordbmsproject\timetable.csv''';
+    filepath := '''C:\media\timetable.csv''';
     /* query := '
         COPY persons(first_name, last_name, dob, email)
         FROM 'C:\sampledb\persons.csv'

@@ -35,19 +35,19 @@ declare
     numerator       INTEGER := 0;
     rec             record;
     CGPA            NUMERIC := 0.0;
+    query           TEXT;
 begin
     transcriptTable := 'Transcript_' || studentID::text;
 
-    for rec in (
-        select (CourseCatalogue.C, GradeMapping.val) into rec
-        from transcriptTable, CourseCatalogue, GradeMapping
-        where transcriptTable.courseID = CourseCatalogue.courseID AND 
+    query:= 'SELECT (CourseCatalogue.C, GradeMapping.val)
+            FROM transcriptTable, CourseCatalogue, GradeMapping
+            WHERE transcriptTable.courseID = CourseCatalogue.courseID AND 
             transcriptTable.year = CourseCatalogue.year AND 
             transcriptTable.semester = CourseCatalogue.semester AND
-            (grade='A' OR grade='A-' OR grade='B' OR grade='B-' OR grade='C' OR grade='C-')
-            transcriptTable.grade = GradeMapping.grade
-    ) 
-    loop
+            grade <>'F' and grade IS NOT NULL
+            transcriptTable.grade = GradeMapping.grade'
+
+    for rec in Execute query loop
         totalCredits := totalCredits + rec.C;
         numerator := numertor + (rec.val * rec.C);
     end loop;

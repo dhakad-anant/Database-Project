@@ -1,6 +1,29 @@
 /* *************   TRIGGER - on inserting an entry in student table **************Final***********************/
+
+drop trigger demo_trigger on demo;
+drop function demo_trigger_function;
+CREATE or replace FUNCTION demo_trigger_function()
+    RETURNS TRIGGER 
+    LANGUAGE PLPGSQL
+AS $$
+BEGIN
+    raise notice 'Update trigger function';
+    return NEW;
+END;
+$$;
+CREATE TRIGGER faculty_trigger 
+    AFTER UPDATE
+    ON demo
+    FOR EACH ROW
+        EXECUTE PROCEDURE demo_trigger_function();
+
+UPDATE demo
+SET int=3 where int=1;
+
+
+
 CREATE TRIGGER postInsertingStudent
-after insert on Student 
+AFTER INSERT ON Student 
 FOR EACH STATEMENT 
 EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 

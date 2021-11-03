@@ -19,3 +19,6 @@
 
 15. trigger for faculty grade table automating marks updating in transcript table of student
 16. make section id in teaches and courseofferingId in courseoffering as serial
+
+
+unnecessary things to create just in case you have some extra time to kill:

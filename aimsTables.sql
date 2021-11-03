@@ -156,18 +156,23 @@ create Table UGCurriculum(
     FOREIGN KEY(deptID) REFERENCES Department(deptID)
 );
 
--- @Dynamic Table
 create table CurriculumList_{curriculumID}(
     courseCategory VARCHAR(20) NOT NULL,
-    courseID integer not null,
+    courseID integer NOT NULL,
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 
--- @Dynamic Table
 create table CurriculumRequirements_{curriculumID}(
     numCreditsProgramCores INTEGER NOT NULL,
     numCreditsProgramElectives INTEGER NOT NULL,
     numCreditsScienceCores INTEGER NOT NULL,
     numCreditsOpenElectives INTEGER NOT NULL,
-    minCGPA INTEGER NOT NULL
+    minCGPA NUMERIC(4,2) NOT NULL
 );
+
+
+
+
+
+
+

@@ -1,7 +1,7 @@
 create or replace procedure canGraduate(
-    IN _studentID  INTEGER;
+    IN _studentID  INTEGER
 )
-language plpgsql
+language plpgsql  
 as $$
 declare
     currentCGPA Numeric(4,2);

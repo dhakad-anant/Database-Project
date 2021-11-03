@@ -181,7 +181,7 @@ begin
     INSERT INTO instructor(insId,insName,deptID) VALUES(_insID,_insName,_deptID);
 end; $$;
 
-call addInstructor(5,'Puneet Goyal',1);
+-- call addInstructor(5,'Puneet Goyal',1);
 
 
 INSERT INTO Instructor(insID,insName, deptID) VALUES 
@@ -214,7 +214,7 @@ declare
     filepath    text;
     query    text;
 begin
-    filepath := '''C:\fordbmsproject\timetable.csv''';
+    filepath := '''C:\media\timetable.csv''';
     /* query := '
         COPY persons(first_name, last_name, dob, email)
         FROM 'C:\sampledb\persons.csv'
@@ -965,6 +965,457 @@ begin
     CALL InsertIntoTeaches(_insID,_courseID,_semester,_year,allotedTimeSlotID);
 END; $$;
 -- call offerCourse(4,1,1,2,NULL,5,'PCE3','{2019,2018}'::integer[]);
+create or replace procedure upload_grades_csv(
+    IN _sectionID INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    filepath    TEXT;
+    query    TEXT;
+    query_2    TEXT;
+    tableName    TEXT;
+    studentTrancriptTableName TEXT;
+    facultygradeTableName TEXT;
+    temp_studentID INTEGER;
+    temp_grade varchar(2);
+    courseID INTEGER;
+    semester INTEGER;
+    year INTEGER;
+    timeSlotID INTEGER;
+    
+begin
+    filepath := '''C:\media\grades_'|| _sectionID::text ||'.csv''';
+    tableName := 'temp_' || _sectionID::text; -- concatinating section Id so multiple proffs can call this procedure at the same time and they won't face any issue since the temp table is different for everyone    
+    query := 'CREATE TABLE ' || tableName || '(
+            studentID INTEGER NOT NULL,
+            grade VARCHAR(2),
+            PRIMARY KEY(studentID)
+        )';
+    EXECUTE query;
+
+    query := 'COPY '|| tableName || '(studentID, grade) 
+              FROM ' || filepath || 
+              ' DELIMITER '','' 
+              CSV HEADER;';
+    EXECUTE query;
+
+    facultygradeTableName:= 'FacultyGradeTable_' || _sectionID::text;    
+    query := 'SELECT ' || facultygradeTableName||'.studentID from ' || facultygradeTableName;
+    for temp_studentID in EXECUTE query loop        
+        temp_grade := 'N';        
+        query_2 := 'SELECT '||tableName||'.grade 
+                    FROM '||tableName||'
+                    WHERE '||tableName||'.studentID = '||temp_studentID::text;
+        for temp_grade in EXECUTE query_2 loop
+            exit;
+        end loop;
+        if temp_grade != 'N' THEN            
+            SELECT Teaches.courseID, Teaches.semester, Teaches.year, Teaches.timeSlotID 
+                INTO courseID, semester, year, timeSlotID
+            FROM Teaches
+            WHERE Teaches.sectionID = _sectionID;
+            studentTrancriptTableName := 'Transcript_' || temp_studentID::text;
+            query_2 := 'UPDATE '||studentTrancriptTableName||
+            ' SET grade = '||''''||temp_grade::text||''''||
+            ' WHERE '||studentTrancriptTableName||'.courseID = '||courseID::text||
+                ' AND '||studentTrancriptTableName||'.semester = '||semester::text||
+                ' AND '||studentTrancriptTableName||'.year = '||year::text||
+                ' AND '||studentTrancriptTableName||'.timeSlotID = '||timeSlotID::text;            
+            EXECUTE query_2;             
+            query_2 :=  'UPDATE '||facultygradeTableName||' 
+                        SET grade = '||''''||temp_grade::text||''''||
+                        ' WHERE '||facultygradeTableName||'.studentID = '||temp_studentID::text;
+            EXECUTE query_2;        
+        end if;
+    end loop;
+    query := 'DROP TABLE ' || tableName; 
+    EXECUTE query;
+end; $$;
+-- call upload_grades_csv(4);
+
+
+create or replace procedure update_grade(
+    IN _sectionID INTEGER,
+    IN _studentID INTEGER,
+    IN _temp_grade VARCHAR(2)
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    courseID INTEGER;
+    semester INTEGER;
+    year INTEGER;
+    timeSlotID INTEGER;
+    studentTrancriptTableName TEXT;
+    facultygradeTableName TEXT;    
+    query TEXT;    
+begin
+    facultygradeTableName:= 'FacultyGradeTable_' || _sectionID::text;  
+    studentTrancriptTableName := 'Transcript_' || _studentID::text; 
+    
+    SELECT Teaches.courseID, Teaches.semester, Teaches.year, Teaches.timeSlotID 
+        INTO courseID, semester, year, timeSlotID
+    FROM Teaches
+    WHERE Teaches.sectionID = _sectionID;
+    
+    query := 'UPDATE '||studentTrancriptTableName||
+    ' SET grade = '||''''||_temp_grade::text||''''||
+    ' WHERE '||studentTrancriptTableName||'.courseID = '||courseID::text||
+        ' AND '||studentTrancriptTableName||'.semester = '||semester::text||
+        ' AND '||studentTrancriptTableName||'.year = '||year::text||
+        ' AND '||studentTrancriptTableName||'.timeSlotID = '||timeSlotID::text;            
+    EXECUTE query;             
+    
+
+    query :=  'UPDATE '||facultygradeTableName||' 
+                SET grade = '||''''||_temp_grade::text||''''||
+                ' WHERE '||facultygradeTableName||'.studentID = '||_studentID::text;
+    EXECUTE query;        
+end; $$;
+-- call update_grade(4,2,'B');
+
+create Table UGCurriculum(
+    curriculumID SERIAL PRIMARY KEY,
+    batch INTEGER NOT NULL,
+    deptID INTEGER NOT NULL,
+    FOREIGN KEY(deptID) REFERENCES Department(deptID)
+);
+
+/* procedure to add a new UGCurriculum */
+create or replace procedure addUGCurriculum(
+    IN _batch INTEGER,
+    IN _deptID INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName TEXT;
+    alreadyExists INTEGER;
+    curriculumID INTEGER;
+    query TEXT;
+begin
+-- stored procedure body
+    SELECT count(*) INTO alreadyExists
+    FROM UGCurriculum
+    WHERE UGCurriculum.batch = _batch and UGCurriculum.deptID = _deptID; 
+
+    IF alreadyExists != 0 THEN
+        raise notice 'UG Curriculum of entered batch and deptID already exists';
+        return;
+    END IF;
+
+    INSERT INTO UGCurriculum(batch,deptID) VALUES(_batch,_deptID);
+
+    /* After inserting get the curriculumID */
+    SELECT UGCurriculum.curriculumID INTO curriculumID
+    FROM UGCurriculum
+    WHERE UGCurriculum.batch = _batch AND UGCurriculum.deptID = _deptID;
+
+    /* Create a dynamic table for the Curriculum List of the given curriculumID*/
+    tableName := 'CurriculumList_' || curriculumID::text;
+    query := 'CREATE TABLE '|| tableName || '(
+                courseCategory VARCHAR(20) NOT NULL,
+                courseID integer not null,
+                FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+                );';
+    EXECUTE query;
+
+    /* Create a dynamic table for the Curriculum Requirements of the given curriculumID*/
+    tableName := 'CurriculumRequirements_' || curriculumID::text;
+    query := 'CREATE TABLE '|| tableName || '(
+                numCreditsProgramCores INTEGER NOT NULL,
+                numCreditsProgramElectives INTEGER NOT NULL,
+                numCreditsScienceCores INTEGER NOT NULL,
+                numCreditsOpenElectives INTEGER NOT NULL,
+                minCGPA INTEGER NOT NULL
+                );';
+    EXECUTE query; 
+end; $$;
+-- call addUGCurriculum(2019, 1);
+
+-- @Dynamic Table
+create table CurriculumList_{curriculumID}(
+    courseCategory VARCHAR(20) NOT NULL,
+    courseID integer NOT NULL,
+    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
+);
+
+-- @Dynamic Table
+
+/* procedure to add to CurriculumList */
+create or replace procedure addCurriculumList(
+    IN _batch INTEGER,
+    IN _deptID INTEGER,
+    IN _courseCategory VARCHAR(20),
+    IN _courseID INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName TEXT;
+    alreadyExists INTEGER;
+    curriculumID INTEGER;
+    query TEXT;
+begin
+-- stored procedure body
+    curriculumID := -1;
+    SELECT UGCurriculum.curriculumID INTO curriculumID
+    FROM UGCurriculum
+    WHERE UGCurriculum.batch = _batch and UGCurriculum.deptID = _deptID; 
+
+    IF curriculumID = -1 THEN
+        raise notice 'UG Curriculum of entered batch and deptID not created';
+        return;
+    END IF;
+
+    /* Create a dynamic table for the Curriculum List of the given curriculumID*/
+    tableName := 'CurriculumList_' || curriculumID::text;
+    query := 'INSERT INTO '|| tableName || '(courseCategory,courseID) 
+                VALUES('||''''||_courseCategory::text||''' '||','|| _courseID::text||')';
+    EXECUTE query; 
+end; $$;
+
+-- call addCurriculumList(2019, 1, 'Program Core', 1);
+-- call addCurriculumList(2019, 1, 'Science Core', 4);
+
+
+create table CurriculumRequirements_{curriculumID}(
+    numCreditsProgramCores INTEGER NOT NULL,
+    numCreditsProgramElectives INTEGER NOT NULL,
+    numCreditsScienceCores INTEGER NOT NULL,
+    numCreditsOpenElectives INTEGER NOT NULL,
+    minCGPA NUMERIC(4,2) NOT NULL
+);
+
+
+/* procedure to add to CurriculumList */
+create or replace procedure addCurriculumRequirements(
+    IN _batch INTEGER,
+    IN _deptID INTEGER,
+    IN numCreditsProgramCores INTEGER,
+    IN numCreditsProgramElectives INTEGER,
+    IN numCreditsScienceCores INTEGER,
+    IN numCreditsOpenElectives INTEGER,
+    IN minCGPA NUMERIC(4,2) 
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName TEXT;
+    alreadyExists INTEGER;
+    curriculumID INTEGER;
+    query TEXT;
+begin
+    curriculumID := -1;
+    SELECT UGCurriculum.curriculumID INTO curriculumID
+    FROM UGCurriculum
+    WHERE UGCurriculum.batch = _batch and UGCurriculum.deptID = _deptID; 
+
+    IF curriculumID = -1 THEN
+        raise notice 'UG Curriculum of entered batch and deptID not created';
+        return;
+    END IF;
+
+    /* Create a dynamic table for the Curriculum List of the given curriculumID*/
+    tableName := 'CurriculumRequirements_' || curriculumID::text;
+    query := 'INSERT INTO '|| tableName || '(numCreditsProgramCores,
+            numCreditsProgramElectives,numCreditsScienceCores,numCreditsOpenElectives,minCGPA) 
+            VALUES('||numCreditsProgramCores||','||
+            numCreditsProgramElectives||','||
+            numCreditsScienceCores||','||
+            numCreditsOpenElectives||','||
+            minCGPA::text||')';
+    EXECUTE query; 
+end; $$;
+
+-- call addCurriculumRequirements(2019,1,25,15,10,10,5.0);
+-- call addCurriculumRequirements(2019, 2,25,15,10,10, 5);
+
+create or replace procedure calculate_current_CGPA(
+    IN studentID INTEGER, 
+    INOUT currentCGPA NUMERIC(4,2) 
+)
+language plpgsql SECURITY DEFINER   
+as $$
+declare
+    transcriptTable text;
+    totalCredits    INTEGER := 0;
+    numerator       INTEGER := 0;
+    rec             record;
+    CGPA            NUMERIC := 0.0;
+    query           TEXT;
+    credits         NUMERIC(4,2);
+    val             INTEGER;
+begin
+    transcriptTable := 'Transcript_' || studentID::text;
+
+    query := 'SELECT CourseCatalogue.C, GradeMapping.val
+            FROM '||transcriptTable||', CourseOffering, GradeMapping, CourseCatalogue
+            WHERE '||transcriptTable||'.courseID = CourseOffering.courseID AND 
+            '||transcriptTable||'.year = CourseOffering.year AND 
+            '||transcriptTable||'.semester = CourseOffering.semester AND 
+            '||transcriptTable||'.grade <> ''F'' AND '||transcriptTable||'.grade IS NOT NULL AND 
+            '||transcriptTable||'.grade = GradeMapping.grade AND 
+            '||transcriptTable||'.timeSlotID =  CourseOffering.timeSlotID AND 
+            CourseCatalogue.courseID = CourseOffering.courseID';
+
+    for credits, val in EXECUTE query loop
+        totalCredits := totalCredits + credits;
+        numerator := numerator + (val * credits);
+    end loop;
+    
+    CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
+
+    currentCGPA := CGPA;
+    
+    raise notice 'CGPA for studentID % is %',studentID,CGPA;
+end; $$;
+
+-- call calculate_current_cgpa(2);
+
+create or replace procedure canGraduate(
+    IN _studentID  INTEGER
+)
+language plpgsql  
+as $$
+declare
+    currentCGPA Numeric(4,2);
+    minCGPA Numeric(4,2);
+    _deptID INTEGER;
+    curriculumID INTEGER;
+    _batch INTEGER;
+    transcriptTable TEXT;
+    curriculumList TEXT;
+    undoneProgramCore INTEGER;
+    undoneProgramElective INTEGER;
+    undoneScienceCore INTEGER;
+    undoneOpenElective INTEGER;
+    CurriculumRequirementsTableName TEXT;
+    query TEXT;
+begin
+    -- first find the deptId and batch of the student
+    _deptID := -1;
+    SELECT Student.deptID INTO _deptID
+    FROM Student
+    WHERE Student.studentID=_studentID;
+
+    IF _deptID = -1 THEN
+        raise notice 'Incorrect Department ID !!!';
+        return;
+    END IF;
+
+    SELECT Student.batch INTO _batch
+    FROM Student
+    WHERE Student.studentID = _studentID;
+    
+    curriculumID := -1;
+    select UGCurriculum.curriculumID into curriculumID
+    from UGCurriculum
+    where UGCurriculum.batch = _batch and UGCurriculum.deptID = _deptID;
+    
+    IF curriculumID = -1 THEN
+        raise notice 'UG Curiculum for % batch and % department ID does not exists',_batch,_deptID;
+        return;
+    END IF;
+    
+    
+    CurriculumRequirementsTableName := 'CurriculumRequirements_' || curriculumID::text;
+    query:= 'SELECT minCGPA FROM '|| CurriculumRequirementsTableName;
+    FOR minCGPA in EXECUTE query loop
+        exit;
+    end loop;
+
+
+    -- Check if the student has a minimum of 5 CGPA or not
+    CALL calculate_current_CGPA(_studentID, currentCGPA);
+    raise notice 'Current CGPA is: %', currentCGPA;
+
+
+    IF currentCGPA < minCGPA THEN
+        raise notice 'CGPA criteria not satisfied as per the UG Curriculum!!!';
+        return;
+    END IF;
+
+    -- find the curriculum id of the UG curriculum that the student is enrolled in
+    SELECT UGCurriculum.curriculumID INTO curriculumID
+    FROM UGCurriculum
+    WHERE UGCurriculum.deptID = _deptID AND UGCurriculum.batch = _batch;
+
+    -- Curriculum List for currcilumID
+    curriculumList := 'CurriculumList_' || curriculumID::text;
+
+    -- transcript table of the student
+    transcriptTable := 'Transcript_' || _studentID::text;
+    
+    -- Check if the student has done all the courses mentioned in its program core
+
+    query:= 'SELECT count(*) 
+            FROM ' || curriculumList ||
+            ' WHERE ' || curriculumList || '.courseCategory = ''Program Core'' 
+                AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' 
+                WHERE grade<>''F'' AND grade IS NOT NULL)';
+
+    for undoneProgramCore IN EXECUTE query LOOP
+        exit;
+    END LOOP;
+
+    IF undoneProgramCore <> 0 THEN 
+        raise notice 'All Program Cores have not been completed!!!';
+        return;
+    END IF;
+
+    -- Check if the student has done all the courses mentioned in its program electives
+
+    query:= 'SELECT count(*) 
+            FROM ' || curriculumList ||
+            ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' 
+            AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
+                                ' WHERE grade <>''F'' AND grade IS NOT NULL)';
+
+    for undoneProgramElective IN EXECUTE query LOOP
+        exit;
+    END LOOP;
+
+    IF undoneProgramElective <> 0 THEN 
+        raise notice 'All Program Electives have not been completed!!!';
+        return;
+    END IF;
+
+    -- Check if the student has done all the courses mentioned in its science core
+    query:= 'SELECT count(*) FROM ' || curriculumList ||
+    ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' 
+    AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
+    ' WHERE grade<>''F'' AND grade IS NOT NULL)';
+
+    for undoneScienceCore IN EXECUTE query LOOP
+        exit;
+    END LOOP;
+
+    IF undoneScienceCore<>0 THEN 
+        raise notice 'All Science Cores have not been completed!!!';
+        return;
+    END IF;
+
+    -- Check if the student has done all the courses mentioned in its open electives
+
+    query:= 'SELECT count(*) FROM ' || curriculumList ||
+    ' WHERE ' || curriculumList|| '.courseCategory = ''Open Elective'' 
+    AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
+    ' WHERE grade<>''F'' AND grade IS NOT NULL)';
+
+    for undoneOpenElective IN EXECUTE query LOOP
+        exit;
+    END LOOP;
+
+    IF undoneOpenElective <> 0 THEN 
+        raise notice 'All Open Electives have not been completed!!!';
+        return;
+    END IF;
+
+    raise notice 'Congratulations! You are eligible to graduate.';
+end; $$;
+call canGraduate(2);
 
 -- Checked till here-----------------------------------------------------------------------------------------------------------------------------
 
