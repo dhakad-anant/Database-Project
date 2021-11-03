@@ -200,8 +200,8 @@ after insert on Student
 FOR EACH ROW
 EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 
-drop trigger postInsertingStudent on student;
-drop function postInsertingStudent_trigger_function();
+-- drop trigger postInsertingStudent on student;
+-- drop function postInsertingStudent_trigger_function();
 -- drop table student;
 /* ********************************************************************************************************** */
 
