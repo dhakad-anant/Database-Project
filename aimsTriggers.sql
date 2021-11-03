@@ -1,34 +1,4 @@
-/* Trigger to generate faculty grade table corresponding to his (course, semester, year) */
-CREATE TRIGGER GenerateFacultyGradeTable 
-AFTER INSERT ON Teaches 
-For each STATEMENT 
-EXECUTE PROCEDURE GenerateFacultyGradeTable_trigger_function(
-    new.sectionID
-);
-
-create or replace function GenerateFacultyGradeTable_trigger_function(
-    IN sectionID INTEGER                                  -- Should a trigger function take any argument?
-)
-returns TRIGGER                                            
-language plpgsql 
-as $$
-declare
-    query text;
-    tableName text;
-begin 
-    tableName = 'FacultyGradeTable_' || sectionID::text;
-    query := 'CREATE TABLE ' || tableName || '(
-        studentID integer not null,
-        grade VARCHAR(2),
-    );';
-
-    EXECUTE query;
-    return new;
-    
-end; $$;
-/* ********************************************************************** */
-
-/* *************   TRIGGER - on inserting an entry in student table ********************************************/
+/* *************   TRIGGER - on inserting an entry in student table **************Final***********************/
 CREATE TRIGGER postInsertingStudent
 after insert on Student 
 FOR EACH STATEMENT 
@@ -85,7 +55,35 @@ end; $$;
 /* ********************************************************************************************************** */
 
 
+/* Trigger to generate faculty grade table corresponding to his (course, semester, year) */
+CREATE TRIGGER GenerateFacultyGradeTable 
+AFTER INSERT ON Teaches 
+For each STATEMENT 
+EXECUTE PROCEDURE GenerateFacultyGradeTable_trigger_function(
+    new.sectionID
+);
 
+create or replace function GenerateFacultyGradeTable_trigger_function(
+    IN sectionID INTEGER                                  -- Should a trigger function take any argument?
+)
+returns TRIGGER                                            
+language plpgsql 
+as $$
+declare
+    query text;
+    tableName text;
+begin 
+    tableName = 'FacultyGradeTable_' || sectionID::text;
+    query := 'CREATE TABLE ' || tableName || '(
+        studentID integer not null,
+        grade VARCHAR(2),
+    );';
+
+    EXECUTE query;
+    return new;
+    
+end; $$;
+/* ********************************************************************** */
 
 
 /* On adding a new instructor to the instructor table, we create a seperate ticket table for each faculty */
