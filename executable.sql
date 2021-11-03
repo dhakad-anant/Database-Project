@@ -188,11 +188,10 @@ CREATE ROLE rahul with
     IN ROLE Students;
 
 /* Creating dummy faculty */
-CREATE ROLE puneetgoyal with  
+CREATE ROLE puneetgoyal with 
     LOGIN 
     PASSWORD 'puneetgoyal'
     IN ROLE Faculty;
-
 
 /* revoking all permissions on procedure from public */
 REVOKE ALL 
@@ -204,10 +203,11 @@ GRANT EXECUTE
 ON PROCEDURE upload_timetable_slots 
 TO DeanAcademicsOffice;
 
+-- @login
 \c - deanacademicsoffice;
 
 /* uploading timetableslot */
--- @login --with DeanAcademicsOffice
+-- @login with DeanAcademicsOffice
 call upload_timetable_slots();
 
 \c - postgres; 
@@ -232,7 +232,8 @@ INSERT INTO CourseCatalogue(courseCode, L, T, P, S, C)
 
 
 /* Nobody will have permission to call this procedure directly */
--- @login -- with deanacademics while creating 
+-- @login -- with deanacademics WHILE CREATING 
+-- @login -- with faculty WHILE EXECUTING
 CREATE OR replace PROCEDURE InsertIntoTeaches(
     IN _insID INTEGER,
     IN _courseID INTEGER, 
@@ -250,8 +251,8 @@ END; $$;
 
 
 /* API for faculty to float course */
--- @login -- with deanacademics while creating 
--- only faculty can execute this procedure
+-- @login -- with deanacademics WHILE CREATING 
+-- @login -- with faculty WHILE EXECUTING
 create or replace procedure offerCourse(
     IN _courseID INTEGER, 
     IN _semester INTEGER,
@@ -325,5 +326,3 @@ begin
 
     CALL InsertIntoTeaches(_insID,_courseID,_semester,_year,allotedTimeSlotID);
 END; $$;
-
-\c - postgres;

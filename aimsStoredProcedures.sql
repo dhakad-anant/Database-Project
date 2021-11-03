@@ -1,3 +1,29 @@
+/* procedure uploading_time-table slots**********************************final**********************************/
+create or replace procedure upload_timetable_slots()
+language plpgsql
+as $$
+declare
+    filepath    text;
+    query    text;
+begin
+    filepath := '''C:\fordbmsproject\timetable.csv''';
+    /* query := '
+        COPY persons(first_name, last_name, dob, email)
+        FROM 'C:\sampledb\persons.csv'
+        DELIMITER ','
+        CSV HEADER;
+    '; */
+
+    query := 'COPY TimeSlot(timeSlotID, slotName, duration, monday, tuesday, wednesday, thursday, friday) 
+              FROM ' || filepath || 
+              ' DELIMITER '','' 
+              CSV HEADER;';
+    EXECUTE QUERY;
+end; $$;
+
+-- call upload_timetable_slots();
+/* *********************************************************************************************************** */
+
 /* insert into Course Offering Table */
 create or replace procedure offerCourse(
     IN _courseID INTEGER, 
@@ -315,34 +341,6 @@ begin
 
 end; $$; 
 /* ----------------------------------------------------------- */
-
-
-
-/* procedure uploading_time-table slots*********************************************************************************************/
-create or replace procedure upload_timetable_slots()
-language plpgsql
-as $$
-declare
-    filepath    text;
-    query    text;
-begin
-    filepath := '''C:\fordbmsproject\timetable.csv''';
-    /* query := '
-        COPY persons(first_name, last_name, dob, email)
-        FROM 'C:\sampledb\persons.csv'
-        DELIMITER ','
-        CSV HEADER;
-    '; */
-
-    query := 'COPY TimeSlot(timeSlotID, slotName, duration, monday, tuesday, wednesday, thursday, friday) 
-              FROM ' || filepath || 
-              ' DELIMITER '','' 
-              CSV HEADER;';
-    EXECUTE QUERY;
-end; $$;
-
--- call upload_timetable_slots();
-/* *********************************************************************************************************** */
 
 
 /* Procedure the print the Transcript Table (gradesheet) of a student */
