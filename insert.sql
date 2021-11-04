@@ -1,16 +1,42 @@
-INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (1,'CS201',3,1,2,6,4);
+call upload_timetable_slots();
+/* CREATE TABLE TimeSlot(
+    timeSlotID INTEGER NOT NULL,
+    slotName VARCHAR(20) UNIQUE NOT NULL,
+    duration INTEGER NOT NULL, -- in minutes
+    monday VARCHAR(20),
+    tuesday VARCHAR(20),
+    wednesday VARCHAR(20),
+    thursday VARCHAR(20),
+    friday VARCHAR(20),
+    
+    PRIMARY KEY(timeSlotID)
+); */
+/* 
+    TimeslotId,TimeSlotName,Duration (mins),Monday,Tuesday,Wednesday,Thrusday,Friday
+    1,PCE1,50,9:00 AM,10:00 AM,11:00 AM,12:00 PM,1:00 PM
+    2,PCE2,50,2:00 PM,3:00 PM,4:00 PM,5:00 PM,6:00 PM
+    3,PCE3,50,10:00 AM,11:00 AM,12:00 PM,1:00 AM,2:00 PM
+    4,PCE4,50,3:00 PM,4:00 PM,5:00 PM,6:00 PM,7:00 PM 
+*/
+
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (7,'CS101',3,1,2,6,4);
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (8,'CS102',3,1,2,6,4);
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (9,'CS103',3,1,3,6,4);
+
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (10,'CS104',3,1,3,6,0.5);
+
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (1,'CS201',3,1,2,6,3);
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (2,'CS202',3,1,2,6,4);
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (3,'CS203',3,1,3,6,4);
+
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (4,'CS301',3,1,2,6,4);
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (5,'CS302',3,1,0,5,3);
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (6,'CS303',3,1,2,6,4);
   
-
 INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES (4,1); -- CS301 -> CS201
+INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES (4,2); -- CS301 -> CS202
 INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES (5,2); -- CS302 -> CS202
 INSERT INTO PreRequisite(courseID,preReqCourseID) VALUES (6,3); -- CS303 -> CS203
-
-
 
 INSERT INTO Department(deptID, deptName) VALUES (1, 'COMPUTER SCIENCE');
 INSERT INTO Department(deptID, deptName) VALUES (2, 'ELECTRICAL');
@@ -28,57 +54,38 @@ INSERT INTO DeanAcademicsOfficeTable(insID) VALUES(3);
 
 
 /* 2019 batch */
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(1, 2019, 1, '2019CSB1060', 'student1');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(2, 2019, 1, '2019CSB1061', 'student2');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(3, 2019, 2, '2019EEB1062', 'student3');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(4, 2019, 2, '2019EEB1063', 'student4');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(5, 2019, 3, '2019MEB1064', 'student5');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(6, 2019, 3, '2019MEB1065', 'student6');
+INSERT INTO Student(studentID, batch, deptID, entryNumber,Name) VALUES(1, 2019, 1, '2019CSB1061', 'student1');
+INSERT INTO Student(studentID, batch, deptID, entryNumber,Name) VALUES(2, 2019, 2, '2019EEB1062', 'student2');
 /* 2018 batch */
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(7, 2018, 1, '2018CSB1060', 'student7');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(8, 2018, 1, '2018CSB1061', 'student8');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(9, 2018, 2, '2018EEB1062', 'student9');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(10, 2018, 2, '2018EEB1063', 'student10');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(11, 2018, 3, '2018MEB1064', 'student11');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(12, 2018, 3, '2018MEB1065', 'student12');
-/* 2017 batch */
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(13, 2017, 1, '2017CSB1060', 'student13');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(14, 2017, 1, '2017CSB1061', 'student14');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(15, 2017, 2, '2017EEB1062', 'student15');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(16, 2017, 2, '2017EEB1063', 'student16');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(17, 2017, 3, '2017MEB1064', 'student17');
-INSERT INTO Student(studentID, batch, deptID, entryNumber) VALUES(18, 2017, 3, '2017MEB1065', 'student18');
+INSERT INTO Student(studentID, batch, deptID, entryNumber,Name) VALUES(3, 2018, 1, '2018CSB1063', 'student3');
+INSERT INTO Student(studentID, batch, deptID, entryNumber,Name) VALUES(4, 2018, 3, '2018MEB1064', 'student4');
 
+-- offerCourse(_courseOfferingID,_courseID,_semester,_year,_cgpa,_sectionID,_insID,allotedTimeSlotID,_list_batches); 
 
-call offerCourse(1,1,1,2,8,1,1,1,'{2019,2018}'); /* CS201 criteria */
-call offerCourse(2,2,2,2,7,2,2,1,'{2019,2018}'); /* CS202 criteria */
-call offerCourse(3,3,1,2,6,3,3,2,'{2019,2018}'); /* CS203 criteria */
-call offerCourse(4,4,1,3,7.5,4,4,1,'{2019}'); /* CS301 Criteria */
-call offerCourse(5,5,1,3,6.5,5,5,2,'{2019}'); /* CS302 criteria */
-call offerCourse(6,6,1,3,4.5,6,6,3,'{2019}'); /* CS303 criteria */
+set role faculty_1;
+call offerCourse(1,1,1,2,8,1,1,1,'{2019,2018}'::integer[]); /* CS201 criteria */
+set role faculty_2;
+call offerCourse(2,2,2,2,7,2,2,1,'{2019,2018}'::integer[]); /* CS202 criteria */
+set role faculty_3;
+call offerCourse(3,3,1,2,6,3,3,2,'{2019,2018}'::integer[]); /* CS203 criteria */
 
+set role faculty_3;
+call offerCourse(12,10,1,2,6,12,3,1,'{2019,2018}'::integer[]); /* CS101 criteria */
 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (1,2019); 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (2,2019); 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (3,2019); 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (4,2019); 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (5,2019); 
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (6,2019); 
+set role faculty_4;
+call offerCourse(4,4,1,3,7.5,4,4,1,'{2019}'::integer[]); /* CS301 Criteria */
+set role faculty_1;
+call offerCourse(5,5,1,3,6.5,5,1,2,'{2019}'::integer[]); /* CS302 criteria */
+set role faculty_2;
+call offerCourse(6,6,1,3,4.5,6,2,3,'{2019}'::integer[]); /* CS303 criteria */
 
-
-INSERT INTO Teaches(insID,CourseID,sectionID,semester,year,timeSlotID) VALUES
-    (1,4,1,1,3,1),
-    (2,5,2,1,3,2),
-    (4,6,3,1,3,1);
-
-INSERT INTO Student(studentID,batch,deptID,entryNumber,Name) VALUES
-    (1,2019,1,'2019CSB1070','A'),
-    (2,2019,2,'2019EEB1107','B'),
-    (3,2019,3,'2019MEB1130','C'),
-    (4,2018,1,'2018CSB1070','AA'),
-    (5,2018,2,'2018EEB1107','BB'),
-    (6,2018,3,'2018MEB1130','CC');
-
+set role faculty_1;
+call offerCourse(7,7,1,1,0,7,1,1,'{2019,2018}'::integer[]); /* CS101 criteria */
+set role faculty_2;
+call offerCourse(8,8,2,1,0,8,2,1,'{2019,2018}'::integer[]); /* CS102 criteria */
+set role faculty_3;
+call offerCourse(9,9,1,1,0,9,3,2,'{2019,2018}'::integer[]); /* CS103 criteria */
+reset role;
 INSERT INTO GradeMapping(grade, val)
     values('A', 10),
           ('A-', 9),
@@ -88,18 +95,55 @@ INSERT INTO GradeMapping(grade, val)
           ('C-', 5),
           ('F', 0);
 
-CREATE OR REPLACE PROCEDURE RegisterStudent(
-    IN _studentID INTEGER,
-    IN _courseID INTEGER,
-    IN _semester INTEGER,
-    IN _year INTEGER,
-    IN _insID INTEGER,
-    IN _timeSlotID INTEGER
-)
+-- CREATE OR REPLACE PROCEDURE RegisterStudent(
+--     IN _studentID INTEGER,
+--     IN _courseID INTEGER,
+--     IN _semester INTEGER,
+--     IN _year INTEGER,
+--     IN _insID INTEGER,
+--     IN _timeSlotID INTEGER
+-- )
 
+-- RegisterStudent(_studentID,_courseID,_semester,_year,_insID,_timeSlotID)
+SET ROLE student_1;
+call RegisterStudent(1,7,1,1,1,1);
+SET ROLE student_1;
+call RegisterStudent(1,8,2,1,2,1);
+SET ROLE student_1;
+call RegisterStudent(1,9,1,1,3,2);
+RESET ROLE;
 
+SET ROLE student_1;
+call RegisterStudent(1,1,1,2,1,1);
+call RegisterStudent(1,10,1,2,3,1); -- To check timeslot clash
 
+SET ROLE student_2;
+call RegisterStudent(2,7,1,1,1,1);
+RESET ROLE;
+SET ROLE student_2;
+call RegisterStudent(2,8,2,1,2,1);
+RESET ROLE;
+SET ROLE student_2;
+call RegisterStudent(2,9,1,1,3,2);
+RESET ROLE;
 
+SET ROLE student_3;
+call RegisterStudent(3,7,1,1,1,1);
+RESET ROLE;
+SET ROLE student_3;
+call RegisterStudent(3,8,2,1,2,1);
+RESET ROLE;
+SET ROLE student_3;
+call RegisterStudent(3,9,1,1,3,2);
+RESET ROLE;
+
+SET ROLE faculty_1;
+CALL upload_grades_csv(7);
+SET ROLE faculty_2;
+CALL upload_grades_csv(8);
+RESET ROLE;
+
+-- 13, 32
 /* **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************** */
 insert into course_catalogue(course_id, name, L, T, P) values ('CS303', 'Operating System', 5, 5, 5); 
 insert into course_catalogue(course_id, name, L, T, P) values ('CS203', 'Pta nahi System', 5, 5, 5); 

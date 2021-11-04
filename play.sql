@@ -447,3 +447,37 @@ begin
     INSERT INTO course(courseid, title, dept_name, credits)
         values(_courseid, _title, _dept_name, _credits);
 end; $$;
+
+
+
+
+
+
+
+
+SELECT grantee, privilege_type 
+FROM information_schema.role_table_grants 
+WHERE table_name='department' and grantee<>'postgres' and grantee<>'public';
+
+drop role academicsection     ;
+drop role batchadvisor        ;
+drop role batchadvisor_1      ;
+drop role batchadvisor_2      ;
+drop role batchadvisor_3      ;
+drop role batchadvisor_4      ;
+drop role batchadvisor_5      ;
+drop role deanacademicsoffice ;
+drop role faculty             ;
+drop role faculty_1           ;
+drop role faculty_2           ;
+drop role faculty_3           ;
+drop role faculty_4           ;
+drop role student_1           ;
+drop role student_2           ;
+drop role student_3           ;
+drop role student_4           ;
+drop role students;
+
+delete from FacultyGradeTable_9;
+delete from transcript_1
+where courseid=9;
