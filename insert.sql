@@ -25,15 +25,20 @@ INSERT INTO Instructor(insID,insName, deptID) VALUES (2, 'Brijesh Kumbhani',2);
 INSERT INTO Instructor(insID,insName, deptID) VALUES (3, 'Apurva Mudgal',1);
 INSERT INTO Instructor(insID,insName, deptID) VALUES (4, 'Balwinder Sodhi',1);
 
+call offerCourse(1,1,1,2,8,1,1,1,'{2019,2018}'); /* CS201 criteria */
+call offerCourse(2,2,2,2,7,2,2,1,'{2019,2018}'); /* CS202 criteria */
+call offerCourse(3,3,1,2,6,3,3,2,'{2019,2018}'); /* CS203 criteria */
+call offerCourse(4,4,1,3,7.5,4,4,1,'{2019'); /* CS301 Criteria */
+call offerCourse(5,5,1,3,6.5,5,5,2,'{2019}'); /* CS302 criteria */
+call offerCourse(6,6,1,3,4.5,6,6,3,'{2019}'); /* CS303 criteria */
 
-INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,cgpaRequired,timeSlotID) VALUES (1,4,1,3,7.5,1);
-INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,timeSlotID) VALUES (2,5,1,3,2);
-INSERT INTO CourseOffering(courseOfferingID,courseID,semester,year,timeSlotID) VALUES (3,6,1,3,1);
 
-
-INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES
-    (1,2019), 
-    (2,2019);
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (1,2019); 
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (2,2019); 
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (3,2019); 
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (4,2019); 
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (5,2019); 
+INSERT INTO BatchesAllowed(CourseOfferingID,Batch) VALUES (6,2019); 
 
 INSERT INTO Teaches(insID,CourseID,sectionID,semester,year,timeSlotID) VALUES
     (1,4,1,1,3,1),

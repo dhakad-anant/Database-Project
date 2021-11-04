@@ -215,7 +215,7 @@ BEGIN
         counter integer := 0;
     BEGIN
         counter := counter + 10;
-        raise notice 'Counter in the subblock is %', counter;
+      raise notice 'Counter in the subblock is %', counter;
         raise notice 'Counter in outer block is %', outer_block.counter;
     END inner_block;
 
@@ -411,28 +411,39 @@ begin
 end; $$;
 
 
-create or replace function testselect(
-    varTableName text;
-)
+create or replace function viewcourse()
 returns table(
-        id INTEGER,
-        name varchar(20),
-        balance NUMERIC
+        courseid INTEGER,
+        title varchar(20),
+        dept_name varchar(6),
+        credits INTEGER
     )
 language plpgsql
 as $$
 DECLARE
     rec record;
 begin
-    for rec in (select * from accounts) loop 
-        id := rec.id;
-        name := rec.name;
-        balance := rec.balance; 
+    for rec in (select * from course) loop 
+        courseid := rec.courseid;
+        title := rec.title;
+        dept_name := rec.dept_name;
+        credits := rec.credits;
         return next;
     end loop;  
 end; $$;
+select * from viewcourse();
 
-select * from testselect();
 
-
-somechanges
+create or replace procedure updateCourseCatalogue(
+    IN _courseid INTEGER,
+    IN _title text,
+    IN _dept_name text,
+    IN _credits INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+begin
+    INSERT INTO course(courseid, title, dept_name, credits)
+        values(_courseid, _title, _dept_name, _credits);
+end; $$;

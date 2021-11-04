@@ -29,6 +29,53 @@ CREATE TABLE CourseCatalogue(
 GRANT ALL ON CourseCatalogue TO DeanAcademicsOffice;
 GRANT SELECT ON CourseCatalogue TO Faculty, BatchAdvisor;
 
+create or replace procedure updateCourseCatalogue(
+    IN _courseID INTEGER,
+    IN _courseCode VARCHAR(10),
+    IN _L INTEGER,
+    IN _T INTEGER,
+    IN _P INTEGER,
+    IN _S INTEGER,
+    IN _C Numeric(4,2)
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+begin
+    INSERT INTO CourseCatalogue(courseID, courseCode, L, T, P, S, C)
+        values(_courseID, _courseCode, _L, _T, _P, _S, _C);
+end; $$;
+REVOKE ALL ON PROCEDURE updateCourseCatalogue FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE updateCourseCatalogue TO deanacademicsoffice;
+
+create or replace function viewCourseCatalogue()
+returns table(
+        courseID INTEGER,
+        courseCode VARCHAR(10),
+        L INTEGER,
+        T INTEGER,
+        P INTEGER,
+        S INTEGER,
+        C Numeric(4,2)
+    )
+language plpgsql
+as $$
+declare
+    rec record;
+begin
+    for rec in (select * from CourseCatalogue) loop 
+        courseID := rec.courseID;
+        courseCode := rec.courseCode;
+        L := rec.L;
+        T := rec.T;
+        P := rec.P;
+        S := rec.S;
+        C := rec.C;
+        return next;    
+    end loop;
+end; $$;
+-- select * from viewCourseCatalogue();
+
 -- DROP TABLE IF EXISTS PreRequisite;
 CREATE TABLE PreRequisite(
     courseID INTEGER NOT NULL,
@@ -191,9 +238,9 @@ returns TRIGGER
 language plpgsql SECURITY DEFINER
 as $$
 declare
-    tableName   text;
+    tableName   TEXT;
     roleName    TEXT;
-    query       text;
+    query       TEXT;
     insID       INTEGER;
 begin
     insID := NEW.insID;
@@ -333,6 +380,8 @@ CREATE TABLE CourseOffering(
 GRANT ALL ON CourseOffering to DeanAcademicsOffice;
 GRANT SELECT ON CourseOffering to Students,Faculty,BatchAdvisor;
 -- select * from courseOffering;
+
+
 -- DROP TABLE IF EXISTS BatchesAllowed;
 CREATE TABLE BatchesAllowed(
     CourseOfferingID INTEGER NOT NULL,
@@ -341,7 +390,7 @@ CREATE TABLE BatchesAllowed(
     FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID) 
 );
 GRANT ALL ON BatchesAllowed to DeanAcademicsOffice;
-GRANT SELECT ON BatchesAllowed to Students,Faculty,BatchAdvisor;
+GRANT SELECT ON BatchesAllowed to Students, Faculty, BatchAdvisor;
 
 -- DROP TABLE IF EXISTS Teaches;
 CREATE TABLE Teaches(
@@ -391,9 +440,6 @@ END; $$;
 REVOKE ALL ON PROCEDURE InsertIntoTeaches FROM PUBLIC;
 
 /* API for faculty to float course */
--- @login -- with deanacademics WHILE CREATING 
--- @login -- with faculty WHILE EXECUTING
-
 -- drop procedure offerCourse;
 CREATE OR REPLACE procedure offerCourse(
     IN _courseOfferingID INTEGER,
@@ -401,9 +447,10 @@ CREATE OR REPLACE procedure offerCourse(
     IN _semester INTEGER,
     IN _year INTEGER,
     IN _cgpa NUMERIC(4, 2),
-    -- IN _sectionID INTEGER,
+    IN _sectionID INTEGER,
     IN _insID INTEGER,
-    IN _slotName VARCHAR(20),
+    -- IN _slotName VARCHAR(20),
+    IN allotedTimeSlotID INTEGER,
     IN _list_batches INTEGER[]
 ) 
 language plpgsql SECURITY DEFINER
@@ -412,7 +459,7 @@ declare
     cnt INTEGER = 0;
     courseOfferingExists INTEGER;
     teachesExists INTEGER;
-    allotedTimeSlotID INTEGER = -1;
+    -- allotedTimeSlotID INTEGER = -1;
     batch INTEGER;
     courseOfferingID INTEGER;
 begin
@@ -431,15 +478,15 @@ begin
         return;
     END IF;
 
-    -- Finding the timeslotId
-    SELECT TimeSlot.timeSlotID INTO allotedTimeSlotID
-    FROM TimeSlot 
-    WHERE TimeSlot.slotName = _slotName;
+    -- Finding the TimeSlotID
+    -- SELECT TimeSlot.timeSlotID INTO allotedTimeSlotID
+    -- FROM TimeSlot 
+    -- WHERE TimeSlot.slotName = _slotName;
 
-    IF allotedTimeSlotID = -1 THEN 
-        raise notice 'TimeSlot does not exist!!!';
-        return;
-    END IF;
+    -- IF allotedTimeSlotID = -1 THEN 
+    --     raise notice 'TimeSlot does not exist!!!';
+    --     return;
+    -- END IF;
 
     -- check if this course offering already exists or not
     SELECT count(*) INTO courseOfferingExists
@@ -477,7 +524,6 @@ begin
         FOREACH batch IN ARRAY _list_batches LOOP
             INSERT INTO BatchesAllowed(CourseOfferingID,batch) VALUES(courseOfferingID,batch);
         END LOOP;
-
     END IF;
 
     -- Check if there is a similar entry into the teaches table or not
@@ -498,32 +544,42 @@ begin
 END; $$;
 REVOKE ALL ON PROCEDURE offerCourse FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE offerCourse to Faculty;
--- select * from BatchesAllowed;
+
+
 -- DROP TABLE IF EXISTS Student;
 CREATE TABLE Student(
-    studentID INTEGER PRIMARY KEY,
+    studentID INTEGER,
     batch INTEGER NOT NULL,
     deptID INTEGER NOT NULL,
-    entryNumber varchar(30) NOT NULL UNIQUE,
+    entryNumber VARCHAR(30) NOT NULL UNIQUE,
     Name VARCHAR(50) NOT NULL,
+    primary key(studentID),
     FOREIGN key(deptID) REFERENCES Department(deptID) 
 );
 GRANT ALL ON PROCEDURE Student to DeanAcademicsOffice,academicsection;
-GRANT SELECT ON PROCEDURE Student to Faculty,BatchAdvisor;
+GRANT SELECT ON PROCEDURE Student to Faculty, BatchAdvisor;
 
-/* *************   TRIGGER - on inserting an entry in student table ********************************************/
-CREATE or replace FUNCTION postInsertingStudent_trigger_function(
-)
+
+CREATE or replace FUNCTION postInsertingStudent_trigger_function()
 returns TRIGGER
 language plpgsql SECURITY DEFINER
 as $$
 declare
-    tableName   text;
-    query       text;
+    tableName   TEXT;
+    roleName    TEXT;
+    query       TEXT;
     studentID INTEGER;
 begin
-    studentID:= NEW.studentID;
-    raise notice 'Current student Id : %',studentID;
+    studentID := NEW.studentID;
+
+    /* Assign a role to each newly added student */
+    roleName := 'Student_' || studentID::text;
+    query := 'CREATE ROLE ' || roleName || 
+                ' WITH LOGIN 
+                PASSWORD ''test''
+                IN ROLE Students';
+    EXECUTE query;
+    
     /* Create transcript table for each student */
     tableName := 'Transcript_' || studentID::text;
     query := 'CREATE TABLE ' || tableName;
@@ -538,6 +594,9 @@ begin
             FOREIGN KEY(courseID, semester, year,timeSlotID) REFERENCES CourseOffering(courseID, semester, year,timeslotID)
         );';
     
+    EXECUTE query;
+    /* Security Feature: Only the student itself can view his transcript table. NO other student can view the transcript table of any other student. Additionally the faculty's, batch advisors, dean office can view his/her transcript */
+    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice';
     EXECUTE query;
 
     /* Create seperate ticket table for each student */
@@ -557,25 +616,34 @@ begin
             PRIMARY KEY(insID,courseID,semester,year,timeSlotID)
         );';
     
-    EXECUTE query; -- transcript table created
+    EXECUTE query; 
+    /* Secuirty Feature */
+    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice';
+    EXECUTE query;
 
     return new;
-    -- handle permissions
-    -- student(read only), dean(read & write), 
 end; $$;  
 REVOKE ALL ON PROCEDURE postInsertingStudent_trigger_function FROM PUBLIC;
 
 CREATE TRIGGER postInsertingStudent
-after insert on Student 
+AFTER INSERT ON Student 
 FOR EACH ROW
 EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 
 -- drop trigger postInsertingStudent on student;
 -- drop function postInsertingStudent_trigger_function();
 -- drop table student;
-/* ********************************************************************************************************** */
--- select * from teaches;
-/* A = 10,A- = 9,B = 8,B- = 7,C = 6,C- = 5,F = 0 */
+
+
+/* 
+ * A = 10
+ * A- = 9
+ * B = 8
+ * B- = 7
+ * C = 6
+ * C- = 5
+ * F = 0 
+*/
 -- DROP TABLE IF EXISTS GradeMapping;
 CREATE TABLE GradeMapping(
     grade VARCHAR(2) NOT NULL,
@@ -583,7 +651,7 @@ CREATE TABLE GradeMapping(
     PRIMARY KEY(grade)
 );
 GRANT ALL ON GradeMapping to DeanAcademicsOffice;
-GRANT SELECT ON GradeMapping to Students,Faculty,BatchAdvisor,AcademicSection;
+GRANT SELECT ON GradeMapping to Students, Faculty, BatchAdvisor, AcademicSection;
 
 CREATE TABLE DeanAcademicsOfficeTable(
     insID INTEGER PRIMARY KEY,
@@ -603,7 +671,65 @@ CREATE TABLE DeanAcademicsOfficeTicketTable(
 );
 GRANT SELECT ON DeanAcademicsOfficeTicketTable to deanacademicsoffice;
 
+
+
+-- Utility function supporting raiseTicket
+CREATE OR REPLACE PROCEDURE raiseTicketUtil(
+    IN _insID INTEGER,
+    IN _studentID INTEGER,
+    IN _studentTicketID INTEGER,
+    IN _semester INTEGER,
+    IN _year INTEGER,
+    IN _timeSlotID INTEGER,
+    IN _courseID INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    facultyTableName TEXT;
+    tableName TEXT;
+    batchAdvisorTableName TEXT;
+    query TEXT;
+    _deptID INTEGER;
+BEGIN
+    /* Inserting into Student Ticket Table */
+    tableName := 'StudentTickettable_'||_studentID::text;
+    query := 'INSERT INTO ' || tableName || '(insID,courseID,semester,year,timeSlotID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_insID::text||','||_courseID::text||','||_semester::text||','||_year::text||','||_timeSlotID::text||',NULL,NULL,NULL)';
+    EXECUTE query;
+
+    query :=  'SELECT ticketID
+                FROM '|| tableName ||'
+                    WHERE insID = $1 and
+                    courseID = $2 and
+                    semester = $3 and
+                    year = $4 and
+                    timeSlotID = $5';
+    for _studentTicketID in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
+        exit;
+    end loop;
+    
+    /* inserting into Faculty Ticket Table */
+    facultyTableName := 'FacultyTicketTable_' || _insID::text;
+    query := 'INSERT INTO ' || facultyTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
+    EXECUTE query;
+
+    /* Inserting into Batch Advisor Ticket Table */
+    -- getting student's department ID
+    select Student.deptID into _deptID from Student where Student.studentID = _studentID;    
+    
+    batchAdvisorTableName := 'BatchAdvisorTicketTable_' || _deptID::text;
+    query := 'INSERT INTO ' || batchAdvisorTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
+    EXECUTE query;
+
+    /* Inserting into Dean Ticket Table */
+    query := 'INSERT INTO DeanAcademicsOfficeTicketTable(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
+    EXECUTE query;
+    
+END; $$;
+
+
 -- Raise ticket procedure for a student..give student a permission to view his/her tickettable
+-- call raiseTicket(7,4,6,1,3,1);
 create or replace procedure raiseTicket(
     IN _studentID INTEGER,
     IN _insID INTEGER,
@@ -612,27 +738,68 @@ create or replace procedure raiseTicket(
     IN _year INTEGER,
     IN _timeSlotID INTEGER
 )
-language plpgsql SECURITY DEFINER
+language plpgsql SECURITY INVOKER
 as $$
 declare
-    tableName text;
-    facultyTableName text;
-    batchAdvisorTableName text;
-    query text;
+    tableName TEXT;
+    roleName TEXT;
+    current_user_name TEXT;
+    facultyTableName TEXT;
+    batchAdvisorTableName TEXT;
+    query TEXT;
     cnt INTEGER := 0;
     _studentTicketID INTEGER;
     _deptID INTEGER;
+    _doesCourseExists INTEGER;
 BEGIN
+    SELECT current_user INTO current_user_name;
+    roleName := 'student_' || _studentID::text;
+
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access. Current Logged in User is % and Trying to raise ticket for User %', current_user_name, roleName;
+        return;     
+    end if;
+
+    SELECT count(*) into _doesCourseExists
+            FROM CourseOffering
+            WHERE CourseOffering.courseID = _courseID
+                    AND CourseOffering.semester = _semester 
+                    AND CourseOffering.year = _year
+                    AND CourseOffering.timeSlotID = _timeSlotID;
+    IF _doesCourseExists = 0 THEN 
+        raise notice 'Course does not exist in Course Offering ... Cannot raise ticket';
+        return;
+    END IF;
+
+    /* Checking whether the course already exists in the Transcript table of the student. 
+    Raise a ticket only in the case where the course is never taken before or if it is taken then the grade should be NULL */
+    tableName := 'Transcript_' || _studentID::text;
+    query := 'SELECT count(*) 
+             FROM '||tableName||'
+             WHERE '||tableName||'.courseID = '||_courseID::text||'
+                AND '||tableName||'.semester = '||_semester::text||'
+                AND '||tableName||'.year = '||_year::text||'
+                AND '||tableName||'.timeSlotID = '||_timeSlotID::text||'
+                AND ('||tableName||'.grade is NULL 
+                            OR 
+                    ('||tableName||'.grade is NOT NULL AND '||tableName||'.grade <> ''F'')
+                )';
+    for _doesCourseExists in EXECUTE query loop
+        exit;
+    end loop;
+    if _doesCourseExists <> 0 then 
+        raise notice 'Course already exists in the Transcript Table .. Cannot raise ticket';
+        return;
+    end if;
+
     tableName := 'StudentTicketTable_' || _studentID::text;
-    
-    query :=  'select count(*) 
-                from '|| tableName ||'
-                    where insID = $1 and
+    query :=  'SELECT count(*) 
+                FROM '|| tableName ||'
+                    WHERE insID = $1 and
                     courseID = $2 and
                     semester = $3 and
                     year = $4 and
                     timeSlotID = $5';
-
     for cnt in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
         exit;
     end loop;
@@ -641,49 +808,18 @@ BEGIN
         return;
     end if;
 
-
-    /* inserting into Student Ticket Table */
-    query := 'INSERT INTO ' || tableName || '(insID,courseID,semester,year,timeSlotID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) values('||_insID||','||_courseID||','||_semester||','||_year||','||_timeSlotID||',NULL,NULL,NULL)';
-
-    EXECUTE query;
-
-    query :=  'select ticketID
-                from '|| tableName ||'
-                    where insID = $1 and
-                    courseID = $2 and
-                    semester = $3 and
-                    year = $4 and
-                    timeSlotID = $5';
-
-    for _studentTicketID in EXECUTE query using _insID, _courseID, _semester, _year, _timeSlotID loop 
-        exit;
-    end loop;
-
-    /* inserting into Faculty Ticket Table */
-    facultyTableName := 'FacultyTicketTable_' || _insID::text;
-    query := 'INSERT INTO ' || facultyTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-
-    /* inserting into Batch Advisor Ticket Table */
-    -- getting student's department ID
-    select Student.deptID into _deptID from Student where Student.studentID = _studentID;    
-    
-    batchAdvisorTableName := 'BatchAdvisorTicketTable_' || _deptID::text;
-    query := 'INSERT INTO ' || batchAdvisorTableName || '(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-
-
-    /* inserting into Dean Ticket Table */
-    query := 'INSERT INTO DeanAcademicsOfficeTicketTable(studentID, studentTicketID,facultyVerdict,batchAdvisorVerdict,deanAcademicsOfficeVerdict) VALUES('||_studentID||','||_studentTicketID||',NULL,NULL,NULL)';
-    EXECUTE query;
-    
+    -- query := 'GRANT EXECUTE ON PROCEDURE raiseTicketUtil to '||roleName;
+    -- EXECUTE query;
+    call raiseTicketUtil(_insID,_studentID,_studentTicketID,_semester,_year,_timeSlotID,_courseID);  
+    -- query := 'REVOKE EXECUTE ON PROCEDURE raiseTicketUtil FROM '||roleName; 
+    -- EXECUTE query; 
 END; $$;
 REVOKE ALL ON PROCEDURE raiseTicket FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE raiseTicket to Students;
 
 
 /* stored procedure for the faculty to update its ticket table */
-create or replace procedure updateFacultyTicketTable(
+CREATE OR REPLACE PROCEDURE updateFacultyTicketTable(
     IN _insID INTEGER,
     IN _studentTicketID INTEGER,  
     IN _studentID INTEGER,  
@@ -692,7 +828,6 @@ create or replace procedure updateFacultyTicketTable(
 language plpgsql SECURITY DEFINER
 as $$
 declare
--- variable declaration
     tableName TEXT;
     query TEXT;
     _deptID INTEGER;
@@ -719,8 +854,8 @@ begin
     end if;
     
     /* add checks for valid student ticket ID */
-    tableName:= 'FacultyTicketTable_' || _insID::text;
-    query:= 'select count(*) FROM ' || tableName ||
+    tableName := 'FacultyTicketTable_' || _insID::text;
+    query:= 'SELECT count(*) FROM ' || tableName ||
         ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
         ' AND ' || tableName|| '.studentID = ' || _studentID::text;
     
@@ -732,17 +867,17 @@ begin
         return;
     end if;
     
-    if _facultyVerdict <> 0::boolean and _facultyVerdict <> 1::boolean then 
+    IF _facultyVerdict <> 0::boolean AND _facultyVerdict <> 1::boolean THEN 
         raise notice 'Invalid faculty verdict as input !!!';
         return;
-    end if;
+    END IF;
+
+
 
     tableName := 'FacultyTicketTable_' || _insID::text;
-
     query := 'UPDATE '|| tableName||'
     SET facultyVerdict = ' || _facultyVerdict::text ||
     ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text;
-
     EXECUTE query;
     
     
@@ -776,6 +911,7 @@ begin
 end; $$;
 REVOKE ALL ON PROCEDURE updateFacultyTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateFacultyTicketTable TO Faculty;
+-- call updateFacultyTicketTable(1,1,1,1::boolean);
 
 /* Stored procedure to update the ticket table of the batch advisor */
 create or replace procedure updateBatchAdvisorTicketTable(
@@ -817,8 +953,8 @@ begin
     /* add checks for valid student ticket ID */
     tableName:= 'BatchAdvisorTicketTable_' || _deptID::text;
     query:= 'SELECT count(*) FROM ' || tableName ||
-        ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text
-        ' AND ' || tableName|| '.studentID = ' || _studentID:text;
+        ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+        ' AND ' || tableName|| '.studentID = ' || _studentID::text;
     
     for _validStudentTicketID in EXECUTE query loop 
         exit;
@@ -839,7 +975,7 @@ begin
     end if;
 
     /* The batch advisor verdict should either be 0 or 1 as it is of boolean type */
-    if _batchAdvisorVerdict <> 0 and _batchAdvisorVerdict <> 1 then 
+    if _batchAdvisorVerdict <> 0::boolean and _batchAdvisorVerdict <> 1::boolean then 
         raise notice 'Invalid Batch Advisor verdict as input !!!';
         return;
     end if;
@@ -847,9 +983,9 @@ begin
     /* Update the verdict of the faculty in the BatchAdvisor Ticket Table */
     tableName:= 'BatchAdvisorTicketTable_' || _deptID::text;
     query := 'UPDATE '|| tableName ||'
-    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict:text ||
-    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID:text 
-    ' AND' || tableName|| '.studentID = ' || _studentID:text;
+    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
     EXECUTE query;
     
 
@@ -857,7 +993,7 @@ begin
     -- Finding the instructor ID first
     tableName := 'StudentTicketTable_' || _studentID::text;
     query := 'SELECT '||tableName||  '.insID FROM '|| tableName ||
-    ' WHERE '||tableName||'.TicketID = '||_studentTicketID:text||' and '||tableName||'.studentID = '||_studentID:text;
+    ' WHERE '||tableName||'.TicketID = '||_studentTicketID::text;
 
     for _insID in EXECUTE query loop 
         exit;
@@ -866,36 +1002,233 @@ begin
 
     tableName := 'FacultyTicketTable_' || _insID::text;
     query := 'UPDATE '|| tableName||'
-    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict ||
-    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID
-    ' AND ' || tableName|| '.studentID = ' || _studentID;
+    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
     EXECUTE query;
 
 
     /* Update the verdict of the batch advisor in the DeanAcademicsOffice Ticket Table */
     tableName:= 'DeanAcademicsOfficeTicketTable';
     query := 'UPDATE '|| tableName ||'
-    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict ||
-    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID 
-    ' AND ' || tableName|| '.studentID = ' || _studentID;
+    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
     EXECUTE query;
     
 
     /* Update the verdict of the batch advisor in the Student Ticket Table */
     tableName:= 'StudentTicketTable_'|| _studentID::text;
     query := 'UPDATE '|| tableName||'
-    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict ||
-    ' wHERE '|| tableName||'.TicketID = ' || _studentTicketID;
+    SET batchAdvisorVerdict = ' || _batchAdvisorVerdict::text ||
+    ' wHERE '|| tableName||'.TicketID = ' || _studentTicketID::text;
     EXECUTE query; 
 
 end; $$;
 REVOKE ALL ON PROCEDURE updateBatchAdvisorTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateBatchAdvisorTicketTable TO BatchAdvisor;
-call updateBatchAdvisorTicketTable('CSE',1,1,1::boolean);
 
+
+create or replace procedure updateDeanAcademicsOfficeTicketTable(
+    IN _studentTicketID INTEGER,    
+    IN _studentID INTEGER,    
+    IN _deanAcademicsOfficeVerdict BOOLEAN
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    tableName text;
+    query text;
+    _deptID INTEGER;
+    _insID INTEGER;
+    _validStudent INTEGER;
+    _validStudentTicketID INTEGER;
+
+    facultyGradeTableName text;
+    studentTrancriptTableName text;
+    _courseID integer; /* to find */
+    _sectionID integer; /* to find */
+    _semester integer; /* to find */
+    _year integer; /* to find */
+    _timeSlotID integer; /* to find */
+begin
+    /* Checks for valid studentID */
+    SELECT count(*) INTO _validStudent
+    FROM Student 
+    WHERE Student.studentID = _studentID;
+    if _validStudent = 0 then
+        raise notice 'No such student with the entered student ID exists!';
+        return;
+    end if;
+
+     /* find the department ID from the student Table */
+    select Student.deptID into _deptID 
+    from Student 
+    where Student.studentID = _studentID; 
+
+    /* add checks for valid student ticket ID */
+    select count(*) into _validStudentTicketID
+    from DeanAcademicsOfficeTicketTable
+    where DeanAcademicsOfficeTicketTable.studentTicketID = _studentTicketID
+    and DeanAcademicsOfficeTicketTable.studentID = _studentID;
+    if _validStudentTicketID = 0 then
+        raise notice 'Student Ticket ID does not exist in the Deans Ticket Table !!!';
+        return;
+    end if;
+    /* The DeanAcademicsOffice verdict should either be 0 or 1 as it is of boolean type */
+    if _deanAcademicsOfficeVerdict <> 0::boolean and _deanAcademicsOfficeVerdict <> 1::boolean then 
+        raise notice 'Invalid DeanAcademicsOffice verdict as input !!!';
+        return;
+    end if;
+
+    /* Updating the verdict in the DeanAcademicsOfficeTicketTable */
+    tableName := 'DeanAcademicsOfficeTicketTable';
+    query := 'UPDATE '|| tableName||'
+    SET deanAcademicsOfficeVerdict = ' || _deanAcademicsOfficeVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
+    EXECUTE query;
+
+
+    /* Update the verdict in the Student Ticket Table */
+    tableName:= 'StudentTicketTable_'|| _studentID::text;
+    query := 'UPDATE '|| tableName||'
+    SET deanAcademicsOfficeVerdict = ' || _deanAcademicsOfficeVerdict::text ||
+    ' WHERE '|| tableName||'.TicketID = ' || _studentTicketID::text;
+    EXECUTE query; 
+
+    /* Update the verdict in the Faculty Ticket Table */
+    -- Finding the instructor ID first
+    tableName := 'StudentTicketTable_' || _studentID::text;
+    query := 'SELECT '||tableName||'.insID  
+    FROM '|| tableName ||
+    ' WHERE '||tableName||'.TicketID = '||_studentTicketID::text;
+    for _insID in EXECUTE query loop 
+        exit;
+    end loop;
+    
+    tableName := 'FacultyTicketTable_' || _insID::text;
+    query := 'UPDATE '|| tableName||'
+    SET deanAcademicsOfficeVerdict = ' || _deanAcademicsOfficeVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
+    EXECUTE query;
+
+
+    /* Update the verdict in the BatchAdvisor Ticket Table */
+    tableName := 'BatchAdvisorTicketTable_' || _deptID::text;
+    query := 'UPDATE '|| tableName ||'
+    SET deanAcademicsOfficeVerdict = ' || _deanAcademicsOfficeVerdict::text ||
+    ' WHERE '|| tableName||'.studentTicketID = ' || _studentTicketID::text  ||
+    ' AND ' || tableName|| '.studentID = ' || _studentID::text;
+    EXECUTE query;
+
+
+    -- If the verdict of Dean Academics office is yes, register the student for that given course
+    IF _deanAcademicsOfficeVerdict = 1::boolean THEN 
+
+        tableName := 'StudentTicketTable_' || _studentID::text;
+
+        query := 'SELECT '||tableName||'.courseID, '||tableName||'.semester, '||tableName||'.year, '||tableName||'.timeSlotID   
+                  FROM '||tableName||' 
+                  WHERE '||tableName||'.ticketID = '||_studentTicketID::text;
+
+        for (_courseID, _semester, _year, _timeSlotID) IN EXECUTE query loop 
+            exit;
+        end loop;
+
+        /* inserting into Student Transcript Table */
+        studentTrancriptTableName := 'Transcript_' || _studentID::text;
+        query := 'INSERT INTO ' || studentTrancriptTableName ||'(courseID, semester, year, timeSlotID) 
+        VALUES ('||_courseID::text||','||_semester::text||','||_year::text||','||_timeSlotID::text||')';
+        EXECUTE query;
+
+        select Teaches.sectionID into _sectionID
+        from Teaches 
+        where Teaches.insID = _insID and
+            Teaches.courseID = _courseID and
+            Teaches.semester = _semester and
+            Teaches.year = _year and
+            Teaches.timeSlotID = _timeSlotID;
+
+        /* inserting into FacultyGradeTable_{_sectionID} */
+        facultyGradeTableName := 'FacultyGradeTable_' || _sectionID::text;
+        query := 'INSERT INTO ' || facultyGradeTableName ||'(studentID) VALUES ('||_studentID::text||')';
+        EXECUTE query;
+    else 
+        raise notice 'Dean Academics Office rejected the ticket of student ID: % and ticket ID: %', _studentID, _studentTicketID;
+    end if;
+end; $$;
+REVOKE ALL ON PROCEDURE updateDeanAcademicsOfficeTicketTable FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE updateDeanAcademicsOfficeTicketTable TO deanacademicsoffice;
+-- call updateDeanAcademicsOfficeTicketTable(1,1,0::boolean);
+
+create or replace procedure calculate_current_CGPA(
+    IN studentID INTEGER, 
+    INOUT currentCGPA NUMERIC(4,2) 
+)
+language plpgsql SECURITY INVOKER  
+as $$
+declare
+    transcriptTable text;
+    totalCredits    INTEGER := 0;
+    numerator       INTEGER := 0;
+    rec             record;
+    CGPA            NUMERIC := 0.0;
+    query           TEXT;
+    credits         NUMERIC(4,2);
+    val             INTEGER;
+begin
+    transcriptTable := 'Transcript_' || studentID::text;
+
+    query := 'SELECT CourseCatalogue.C, GradeMapping.val
+            FROM '||transcriptTable||', CourseOffering, GradeMapping, CourseCatalogue
+            WHERE '||transcriptTable||'.courseID = CourseOffering.courseID AND 
+            '||transcriptTable||'.year = CourseOffering.year AND 
+            '||transcriptTable||'.semester = CourseOffering.semester AND 
+            '||transcriptTable||'.grade <> ''F'' AND '||transcriptTable||'.grade IS NOT NULL AND 
+            '||transcriptTable||'.grade = GradeMapping.grade AND 
+            '||transcriptTable||'.timeSlotID =  CourseOffering.timeSlotID AND 
+            CourseCatalogue.courseID = CourseOffering.courseID';
+
+    for credits, val in EXECUTE query loop
+        totalCredits := totalCredits + credits;
+        numerator := numerator + (val * credits);
+    end loop;
+    
+    if totalCredits<>0 then
+        CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
+    elsif 
+        CGPA:=0
+    end if;
+    currentCGPA := CGPA;
+    -- raise notice 'CGPA for studentID % is %',studentID,CGPA;
+end; $$;
+REVOKE ALL ON PROCEDURE calculate_current_CGPA FROM PUBLIC;
+
+create or replace procedure print_current_CGPA(
+    IN studentID INTEGER 
+)
+language plpgsql SECURITY INVOKER   
+as $$
+declare
+    currentCGPA NUMERIC(4, 2) := 0;
+    query TEXT;
+    roleName TEXT;
+begin
+    roleName := 'Student_' || studentID::text;
+    query := 'GRANT EXECUTE ON PROCEDURE calculate_current_CGPA TO '||roleName;
+    EXECUTE query;
+    call calculate_current_CGPA(studentID, currentCGPA);
+    query := 'REVOKE EXECUTE ON PROCEDURE calculate_current_CGPA FROM '||roleName;
+    EXECUTE query;
+    raise notice 'CGPA for studentID % is %',studentID,currentCGPA;
+end; $$;
+
+
+----------------------------------- Checked till here --------------------------
 
 -- need faculty grade table before running this
-
 create or replace procedure RegisterStudent(
     IN _studentID INTEGER,
     IN _courseCode VARCHAR(10),
@@ -909,6 +1242,7 @@ as $$
 declare 
     studentTrancriptTableName text;
     facultyGradeTableName text;
+    
     prevCredit NUMERIC(4,2);
     prevPrevCredit NUMERIC(4,2);
     averageCredits NUMERIC(10,2);
@@ -931,25 +1265,25 @@ declare
 begin
     -- Computing the Course Id
     _courseID := -1;
-    select CourseCatalogue.courseID into _courseID
-    from CourseCatalogue
-    where CourseCatalogue.courseCode = _courseCode;
-
-    if _courseID = -1 then 
+    SELECT CourseCatalogue.courseID INTO _courseID
+    FROM CourseCatalogue
+    WHERE CourseCatalogue.courseCode = _courseCode;
+    IF _courseID = -1 THEN 
         raise notice 'Course Does not Exist!';
         return;
-    end if;
+    END IF;
+
 
     --  Computing the Instructor Id
     _insId := -1;
-    select Instructor.insId into _insId
-    from Instructor
-    where Instructor.insName=_insName;
+    SELECT Instructor.insId INTO _insId
+    FROM Instructor
+    WHERE Instructor.insName=_insName;
 
-    if _insId = -1 then
+    IF _insId = -1 THEN
         raise notice 'Instructor does not exist!';
         return;
-    end if;
+    END IF;
 
 
     -- Fetching the transcript table for each student
@@ -988,7 +1322,7 @@ begin
     end loop;
 
 
-    prevPrevCredit:=-1;
+    prevPrevCredit := -1;
     query := 'SELECT SUM(CourseCatalogue.C)
             FROM ' || studentTrancriptTableName || ', CourseCatalogue
             WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
@@ -1064,11 +1398,8 @@ begin
         return;
     end if;
 
-
     -- check course cgpa requirement
-    -- call function to calculate Current CGPA
-    -- declare this function above this one
-    -- currentCGPA:= calculate_current_CGPA(_studentID);
+    call calculate_current_CGPA(_studentID,currentCGPA);
     select CourseOffering.cgpaRequired into cgpaRequired
     from CourseOffering
     where CourseOffering.courseID = _courseID 
@@ -1103,16 +1434,11 @@ begin
     EXECUTE query;
 end; $$; 
 
--- REVOKE ALL 
--- ON PROCEDURE RegisterStudent
--- FROM PUBLIC;
+REVOKE ALL ON PROCEDURE RegisterStudent FROM PUBLIC;
 
--- GRANT EXECUTE 
--- ON PROCEDURE RegisterStudent 
--- TO students;
+GRANT EXECUTE ON PROCEDURE RegisterStudent TO students;
 
 
--- call offerCourse(4,1,1,2,NULL,5,'PCE3','{2019,2018}'::integer[]);
 create or replace procedure upload_grades_csv(
     IN _sectionID INTEGER
 )
@@ -1380,57 +1706,7 @@ end; $$;
 -- call addCurriculumRequirements(2019,1,25,15,10,10,5.0);
 -- call addCurriculumRequirements(2019, 2,25,15,10,10, 5);
 
-create or replace procedure calculate_current_CGPA(
-    IN studentID INTEGER, 
-    INOUT currentCGPA NUMERIC(4,2) 
-)
-language plpgsql SECURITY DEFINER   
-as $$
-declare
-    transcriptTable text;
-    totalCredits    INTEGER := 0;
-    numerator       INTEGER := 0;
-    rec             record;
-    CGPA            NUMERIC := 0.0;
-    query           TEXT;
-    credits         NUMERIC(4,2);
-    val             INTEGER;
-begin
-    transcriptTable := 'Transcript_' || studentID::text;
 
-    query := 'SELECT CourseCatalogue.C, GradeMapping.val
-            FROM '||transcriptTable||', CourseOffering, GradeMapping, CourseCatalogue
-            WHERE '||transcriptTable||'.courseID = CourseOffering.courseID AND 
-            '||transcriptTable||'.year = CourseOffering.year AND 
-            '||transcriptTable||'.semester = CourseOffering.semester AND 
-            '||transcriptTable||'.grade <> ''F'' AND '||transcriptTable||'.grade IS NOT NULL AND 
-            '||transcriptTable||'.grade = GradeMapping.grade AND 
-            '||transcriptTable||'.timeSlotID =  CourseOffering.timeSlotID AND 
-            CourseCatalogue.courseID = CourseOffering.courseID';
-
-    for credits, val in EXECUTE query loop
-        totalCredits := totalCredits + credits;
-        numerator := numerator + (val * credits);
-    end loop;
-    
-    CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
-
-    currentCGPA := CGPA;
-    -- raise notice 'CGPA for studentID % is %',studentID,CGPA;
-end; $$;
-
-
-create or replace procedure print_current_CGPA(
-    IN studentID INTEGER 
-)
-language plpgsql SECURITY DEFINER   
-as $$
-declare
-    currentCGPA NUMERIC(4, 2) := 0;
-begin
-    call calculate_current_CGPA(studentID, currentCGPA);
-    raise notice 'CGPA for studentID % is %',studentID,currentCGPA;
-end; $$;
 -- call calculate_current_cgpa(2);
 
 create or replace procedure canGraduate(

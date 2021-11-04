@@ -406,18 +406,25 @@ end; $$;
 
 
 
-/* Procedure for uploading grades of a particular (course, semester, year, instructor) */
-create or replace procedure uploadCourseGrade()
-language plpgsql
+create or replace procedure test_test(
+    in _studentID INTEGER
+)
+language plpgsql SECURITY INVOKER
 as $$
 declare
-
+    currentuser TEXT;
+    idealUser TEXT;
 begin
-
+    raise notice 'Entered student ID : %', _studentID;
+    select current_user into currentUser;
+    idealUser:='Student_'||_studentID::text;
+    if idealUser<>currentUser then
+        raise notice 'USers are different';
+    end if;
+    
+    raise notice '%',currentUser;
 end; $$;
-/****************************************************************************************/
-
-
+call test_test(1);
 
 /********************  TESTING CODE ****************************************************************************************************** /
 
@@ -475,4 +482,10 @@ begin
     query := 'COPY '||tableName||' to ''C:\media\'||_fileName||'.csv'' DELIMITER '','' CSV HEADER';
     EXECUTE query;
 end; $$;
+/* ************************************************************************************************************ */
+
+
+
+
+/* viewCourseCatalogue and updateCourseCatalogue*************************************************************** */
 /* ************************************************************************************************************ */
