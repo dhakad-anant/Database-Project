@@ -10,7 +10,7 @@ Example: grant student,joe to student_login;
     revoke student,joe from student_login;
 
  3. remove permission to access stored procedure 
-revoke all on procedure <procedure_name> from public;
+REVOKE ALL ON PROCEDURE <procedure_name> FROM PUBLIC;
 
 grant execute on procedure <procedure_name> to role;
 

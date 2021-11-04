@@ -129,6 +129,19 @@ order by schema_name, specific_name;
 
 /* query to view all permissions */
 
+
+/* query to export table into a csv file */
+create or replace procedure exportIntoCSV(
+    IN _fileName TEXT
+)
+language plpgsql
+as $$
+declare
+    filepath text := '';
+begin
+    filepath = 'C:\fordbmsproject\'
+    EXECUTE (COPY course to 'C:\')
+end; $$;
 /* **************************************************************************************************************************************************************************************** */
 
 

@@ -95,12 +95,13 @@ CREATE TABLE FacultyGradeTable_{sectionID}(
 );
 /* @Dynamic Table */
 CREATE TABLE Transcript_{studentID}(
-    courseID INTEGER NOT NULL, 
+    courseID INTEGER NOT NULL,
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     grade VARCHAR(2),
+    timeSlotID INTEGER NOT NULL,
     PRIMARY KEY(courseID, semester, year),
-    FOREIGN KEY(courseID,semester,year) REFERENCES CourseOffering(courseID,semester,year)
+    FOREIGN KEY(courseID, semester, year,timeSlotID) REFERENCES CourseOffering(courseID, semester, year,timeslotID)
 );
 /* @Dynamic Table */
 CREATE TABLE StudentTicketTable_{studentID}(
@@ -109,7 +110,7 @@ CREATE TABLE StudentTicketTable_{studentID}(
     semester INTEGER NOT NULL,
     year INTEGER NOT NULL,
     timeSlotID INTEGER NOT NULL,
-    studentTicketID SERIAL, 
+    ticketID SERIAL, 
     facultyVerdict BOOLEAN,
     batchAdvisorVerdict BOOLEAN,
     deanAcademicsOfficeVerdict BOOLEAN,

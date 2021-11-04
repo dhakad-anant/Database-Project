@@ -119,22 +119,6 @@ END; $$;
 
 
 
-/* procedure to make a faculty a BatchAdvisor */
-create or replace procedure makeBatchAdvisor(
-    IN _insID INTEGER,
-    IN _deptID INTEGER,
-)
-language plpgsql
-as $$
-declare
-    tableName text;
-begin
--- stored procedure body
-    tableName = 'BatchAdvisor_' || new.deptID::text;
-
-    query = 'UPDATE '|| tableName ||' SET insID = '|| _insID ||' where deptID = '||_deptID||';'
-    EXECUTE query;
-end; $$;
 
 
 /* ----------------------------------------------------------- */
@@ -366,39 +350,56 @@ end; $$;
 
 
 /* Compute the current CGPA of any student************************************************************************/
-create or replace procedure calculate_current_CGPA(IN INT studentID)
-    language plpgsql    
+create or replace procedure calculate_current_CGPA(
+    IN studentID INTEGER, 
+    INOUT currentCGPA NUMERIC(4,2) 
+)
+language plpgsql SECURITY DEFINER   
 as $$
 declare
-    -- Transcritp_1
     transcriptTable text;
     totalCredits    INTEGER := 0;
     numerator       INTEGER := 0;
     rec             record;
     CGPA            NUMERIC := 0.0;
+    query           TEXT;
+    credits         NUMERIC(4,2);
+    val             INTEGER;
 begin
     transcriptTable := 'Transcript_' || studentID::text;
 
-    for rec in (
-        select (CourseCatalogue.C, GradeMapping.val) into rec
-        from transcriptTable, CourseCatalogue, GradeMapping
-        where transcriptTable.courseID = CourseCatalogue.courseID AND 
-            transcriptTable.year = CourseCatalogue.year AND 
-            transcriptTable.semester = CourseCatalogue.semester AND
-            transcriptTable.grade <> NULL AND
-            transcriptTable.grade <> 'F' AND 
-            transcriptTable.grade = GradeMapping.grade
-    ) 
-    loop
-        totalCredits := totalCredits + rec.C;
-        numerator := numertor + (rec.val * rec.C);
+    query := 'SELECT CourseCatalogue.C, GradeMapping.val
+            FROM '||transcriptTable||', CourseOffering, GradeMapping, CourseCatalogue
+            WHERE '||transcriptTable||'.courseID = CourseOffering.courseID AND 
+            '||transcriptTable||'.year = CourseOffering.year AND 
+            '||transcriptTable||'.semester = CourseOffering.semester AND 
+            '||transcriptTable||'.grade <> ''F'' AND '||transcriptTable||'.grade IS NOT NULL AND 
+            '||transcriptTable||'.grade = GradeMapping.grade AND 
+            '||transcriptTable||'.timeSlotID =  CourseOffering.timeSlotID AND 
+            CourseCatalogue.courseID = CourseOffering.courseID';
+
+    for credits, val in EXECUTE query loop
+        totalCredits := totalCredits + credits;
+        numerator := numerator + (val * credits);
     end loop;
     
     CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
 
-    raise notice 'CGPA for studentID % is %', 
-        studentID, 
-        CGPA;
+    currentCGPA := CGPA;
+    
+    raise notice 'CGPA for studentID % is %',studentID,CGPA;
+end; $$;
+
+create or replace procedure print_current_CGPA(
+    IN studentID INTEGER
+)
+language plpgsql SECURITY DEFINER   
+as $$
+declare
+    currentCGPA NUMERIC(4, 2) := 0;
+begin
+    call calculate_current_CGPA(studentID, currentCGPA)
+    raise notice 'CGPA for studentID % is %',studentID,currentCGPA;
 end; $$;
 -- cgpa = (summation{no. of credits x grade_in_that_course})/totalCredits
 /****************************************************************************************** */
@@ -444,3 +445,34 @@ begin
     end loop;
 end; $$;
 
+
+
+
+/* Export INTO a csv file************************************************************************************************ */
+create or replace procedure exportTranscript(
+    _studentID integer
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare
+    tableName text;
+    _fileName text;
+begin
+    tableName := 'transcript_' || _studentID::text;
+    _fileName := 'ReportStudent_' || _studentID::text;
+    call exportTableIntoCSV(tableName, _fileName);
+end; $$;
+
+create or replace procedure exportTableIntoCSV(
+    tableName text,
+    _fileName text
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    query text;
+begin
+    query := 'COPY '||tableName||' to ''C:\media\'||_fileName||'.csv'' DELIMITER '','' CSV HEADER';
+    EXECUTE query;
+end; $$;
+/* ************************************************************************************************************ */

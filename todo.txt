@@ -7,12 +7,13 @@
 12. ****************once dean academics verdict changes to yes, write code in the update function of dean academics and copy this code to executable file
 13. generate queries for test cases
 14. **************raise ticket only when credit limit has been exceeded credit-limit and the course-offering-restrictions,
-15. correct formatting of the view functions
 16. make section id in teaches and courseofferingId in courseoffering as serial
-18. ****************The course catalogue can be edited only by the Dean Academics office.
+18. **************** The course catalogue can be edited only by the Dean Academics office.
 19. ****************A student can see only his/her grades. But a faculty or Dean Academics office can see all the grades.
 20. **************** make a procedure to print current cgpa
 21. ***************** create a login role for student in postinsertingstudent
+22. ********************* Dean table
+23. *************************** Correct the formatting of views in ticketprocedures file
 
 unnecessary things to create just in case you have some extra time to kill:
 9. correct the notion of batch advisor (if time permits) but this would contradict the doc
