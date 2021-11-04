@@ -1683,15 +1683,18 @@ REVOKE ALL ON PROCEDURE update_grade FROM PUBLIC;
 GRANT ALL ON PROCEDURE update_grade TO Faculty;
 
 ----------------------------------- Checked till here --------------------------
-create Table UGCurriculum(
-    curriculumID SERIAL PRIMARY KEY,
+CREATE TABLE UGCurriculum(
+    curriculumID SERIAL,
     batch INTEGER NOT NULL,
     deptID INTEGER NOT NULL,
+    PRIMARY KEY(curriculumID),
     FOREIGN KEY(deptID) REFERENCES Department(deptID)
 );
+GRANT ALL ON UGCurriculum TO DeanAcademicsOffice,AcademicSection;
+GRANT SELECT ON UGCurriculum TO Students, Faculty, BatchAdvisor;
 
 /* procedure to add a new UGCurriculum */
-create or replace procedure addUGCurriculum(
+CREATE OR REPLACE PROCEDURE addUGCurriculum(
     IN _batch INTEGER,
     IN _deptID INTEGER
 )
@@ -1703,7 +1706,6 @@ declare
     curriculumID INTEGER;
     query TEXT;
 begin
--- stored procedure body
     SELECT count(*) INTO alreadyExists
     FROM UGCurriculum
     WHERE UGCurriculum.batch = _batch and UGCurriculum.deptID = _deptID; 
@@ -1728,6 +1730,10 @@ begin
                 FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
                 );';
     EXECUTE query;
+    query := 'GRANT ALL ON '||tableName||' TO DeanAcademicsOffice,AcademicSection';
+    EXECUTE query;
+    query := 'GRANT SELECT ON '||tableName||' TO Students, Faculty, BatchAdvisor';
+    EXECUTE query;
 
     /* Create a dynamic table for the Curriculum Requirements of the given curriculumID*/
     tableName := 'CurriculumRequirements_' || curriculumID::text;
@@ -1738,20 +1744,23 @@ begin
                 numCreditsOpenElectives INTEGER NOT NULL,
                 minCGPA INTEGER NOT NULL
                 );';
-    EXECUTE query; 
+    EXECUTE query;
+    query := 'GRANT ALL ON '||tableName||' TO DeanAcademicsOffice,AcademicSection';
+    EXECUTE query;
+    query := 'GRANT SELECT ON '||tableName||' TO Students, Faculty, BatchAdvisor';
+    EXECUTE query;
 end; $$;
--- call addUGCurriculum(2019, 1);
+REVOKE ALL ON PROCEDURE addUGCurriculum FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE addUGCurriculum TO DeanAcademicsOffice, AcademicSection;
 
--- @Dynamic Table
-create table CurriculumList_{curriculumID}(
-    courseCategory VARCHAR(20) NOT NULL,
-    courseID integer NOT NULL,
-    FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
-);
-
--- @Dynamic Table
-
-/* procedure to add to CurriculumList */
+/* 
+ * procedure to add to CurriculumList 
+ *  List of Course Categories: (Case Sensative)
+    1. Program Core
+    2. Science Core
+    3. Program Elective
+    4. Open Elective
+*/
 create or replace procedure addCurriculumList(
     IN _batch INTEGER,
     IN _deptID INTEGER,
@@ -1766,7 +1775,6 @@ declare
     curriculumID INTEGER;
     query TEXT;
 begin
--- stored procedure body
     curriculumID := -1;
     SELECT UGCurriculum.curriculumID INTO curriculumID
     FROM UGCurriculum
@@ -1777,26 +1785,26 @@ begin
         return;
     END IF;
 
+    IF _courseCategory <> 'Program Core' AND _courseCategory <> 'Science Core' 
+        AND _courseCategory <> 'Program Elective' AND _courseCategory <> 'Open Elective' THEN
+        raise notice 'Invalid Course Category entered ... Please try again 1';
+        return;
+    END IF;
+
     /* Create a dynamic table for the Curriculum List of the given curriculumID*/
     tableName := 'CurriculumList_' || curriculumID::text;
     query := 'INSERT INTO '|| tableName || '(courseCategory,courseID) 
                 VALUES('||''''||_courseCategory::text||''' '||','|| _courseID::text||')';
     EXECUTE query; 
 end; $$;
-
+REVOKE ALL ON PROCEDURE addCurriculumList FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE addCurriculumList TO DeanAcademicsOffice, AcademicSection;
 -- call addCurriculumList(2019, 1, 'Program Core', 1);
 -- call addCurriculumList(2019, 1, 'Science Core', 4);
 
 
-create table CurriculumRequirements_{curriculumID}(
-    numCreditsProgramCores INTEGER NOT NULL,
-    numCreditsProgramElectives INTEGER NOT NULL,
-    numCreditsScienceCores INTEGER NOT NULL,
-    numCreditsOpenElectives INTEGER NOT NULL,
-    minCGPA NUMERIC(4,2) NOT NULL
-);
 /* procedure to add to CurriculumList */
-create or replace procedure addCurriculumRequirements(
+CREATE OR REPLACE PROCEDURE addCurriculumRequirements(
     IN _batch INTEGER,
     IN _deptID INTEGER,
     IN numCreditsProgramCores INTEGER,
@@ -1834,17 +1842,17 @@ begin
             minCGPA::text||')';
     EXECUTE query; 
 end; $$;
-
+REVOKE ALL ON PROCEDURE addCurriculumRequirements FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE addCurriculumRequirements TO DeanAcademicsOffice,AcademicSection;
 -- call addCurriculumRequirements(2019,1,25,15,10,10,5.0);
 -- call addCurriculumRequirements(2019, 2,25,15,10,10, 5);
 
 
 -- call calculate_current_cgpa(2);
-
-create or replace procedure canGraduate(
+CREATE OR REPLACE PROCEDURE canGraduate(
     IN _studentID  INTEGER
 )
-language plpgsql  
+language plpgsql SECURITY DEFINER  
 as $$
 declare
     currentCGPA Numeric(4,2);
@@ -1984,44 +1992,11 @@ begin
 end; $$;
 call canGraduate(2);
 
--- Checked till here-----------------------------------------------------------------------------------------------------------------------------
 
-/* revoking all permissions on procedure from public */
-REVOKE ALL 
-ON PROCEDURE upload_timetable_slots 
-FROM PUBLIC;
-
-/* Now only academic section can use this procedure */
-GRANT EXECUTE 
-ON PROCEDURE upload_timetable_slots 
-TO DeanAcademicsOffice;
-
--- @login
-\c - deanacademicsoffice;
-
-/* uploading timetableslot */
--- @login with DeanAcademicsOffice
--- call upload_timetable_slots();
-
-\c - postgres; 
--- SELECT grantee, privilege_type 
--- FROM information_schema.role_table_grants 
--- WHERE grantee<>'postgres' and grantee<>'PUBLIC' and table_name<>'timeslottable';
-
-/* giving all permission on Coursecatalogue to deanacademicsoffice */
-GRANT ALL 
-ON CourseCatalogue 
-TO deanacademicsoffice;
 
 /* Giving sequence permission to deanacademicsoffice */
 GRANT USAGE, SELECT 
 ON ALL SEQUENCES IN SCHEMA public 
 TO DeanAcademicsOffice;
 
-/* Trigger which generates batchAdvisor table its ticket table */
--- @login -- with "ADMIN" WHILE CREATING 
 
-
-/* Nobody will have permission to call this procedure directly */
--- @login -- with deanacademics WHILE CREATING 
--- @login -- with faculty WHILE EXECUTING
