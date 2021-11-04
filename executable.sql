@@ -1,4 +1,4 @@
-DROP DATABASE IF EXISTS aims;
+-- DROP DATABASE IF EXISTS aims;
 
 CREATE DATABASE aims;
 
@@ -27,9 +27,9 @@ CREATE TABLE CourseCatalogue(
 );
 -- select * from CourseCatalogue;
 GRANT ALL ON CourseCatalogue TO DeanAcademicsOffice;
-GRANT SELECT ON CourseCatalogue TO Students, Faculty, BatchAdvisor;
+GRANT SELECT ON CourseCatalogue TO Students, Faculty, BatchAdvisor,AcademicSection;
 
-create or replace procedure updateCourseCatalogue(
+CREATE OR REPLACE PROCEDURE updateCourseCatalogue(
     IN _courseID INTEGER,
     IN _courseCode VARCHAR(10),
     IN _L INTEGER,
@@ -43,13 +43,13 @@ as $$
 declare
 begin
     INSERT INTO CourseCatalogue(courseID, courseCode, L, T, P, S, C)
-        values(_courseID, _courseCode, _L, _T, _P, _S, _C);
+        VALUES(_courseID, _courseCode, _L, _T, _P, _S, _C);
 end; $$;
 REVOKE ALL ON PROCEDURE updateCourseCatalogue FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateCourseCatalogue TO deanacademicsoffice;
 
-create or replace function viewCourseCatalogue()
-returns table(
+CREATE OR REPLACE FUNCTION viewCourseCatalogue()
+RETURNS TABLE(
         courseID INTEGER,
         courseCode VARCHAR(10),
         L INTEGER,
@@ -58,7 +58,7 @@ returns table(
         S INTEGER,
         C Numeric(4,2)
     )
-language plpgsql
+language plpgsql SECURITY DEFINER
 as $$
 declare
     rec record;
@@ -74,6 +74,7 @@ begin
         return next;    
     end loop;
 end; $$;
+-- To use this function, type the command:
 -- select * from viewCourseCatalogue();
 
 -- DROP TABLE IF EXISTS PreRequisite;
@@ -85,7 +86,7 @@ CREATE TABLE PreRequisite(
     PRIMARY KEY(courseID, preReqCourseID)
 );
 GRANT ALL ON PreRequisite TO DeanAcademicsOffice;
-GRANT SELECT ON PreRequisite TO Faculty, BatchAdvisor, Students;
+GRANT SELECT ON PreRequisite TO Faculty, BatchAdvisor, Students,AcademicSection;
 -- select * from PreRequisite;
 
 -- DROP TABLE IF EXISTS Department;
@@ -210,7 +211,6 @@ begin
     query := 'UPDATE '|| tableName ||' SET insID = '|| _insID::text ||' WHERE '|| tableName||'.deptID = '||_deptID::text;
     EXECUTE query;
 end; $$;
-
 /* Revoking the permissions to call this procedure from public, only the Dean Academics Office can appoint a new Batch Advisor */
 REVOKE ALL ON PROCEDURE makeBatchAdvisor FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE makeBatchAdvisor TO DeanAcademicsOffice;
@@ -280,10 +280,6 @@ after insert on Instructor
 For each ROW
 EXECUTE PROCEDURE postInsertingInstructor_trigger_function();
 
--- DROP TRIGGER postInsertingInstructor ON instructor;
--- DROP FUNCTION postInsertingInstructor_trigger_function;
--- DROP TABLE Instructor;
-
 /* procedure to make a view Instructor Table */
 create or replace procedure viewInstructors()
 language plpgsql SECURITY INVOKER
@@ -298,7 +294,7 @@ begin
     end loop;
 end; $$;
 REVOKE ALL ON PROCEDURE viewInstructors FROM PUBLIC;
-GRANT EXECUTE ON PROCEDURE  viewInstructors TO deanacademicsoffice;
+GRANT EXECUTE ON PROCEDURE  viewInstructors TO deanacademicsoffice,AcademicSection,Students,Faculty,BatchAdvisor;
 
 /* procedure to make a new Instructor */
 create or replace procedure addInstructor(
@@ -326,8 +322,6 @@ begin
 end; $$;
 REVOKE ALL ON PROCEDURE addInstructor FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE addInstructor TO deanacademicsoffice;
-
-
 
 -- DROP TABLE IF EXISTS TimeSlot;
 CREATE TABLE TimeSlot(
@@ -363,9 +357,6 @@ begin
 end; $$;
 REVOKE ALL ON PROCEDURE upload_timetable_slots FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE upload_timetable_slots TO academicsection, DeanAcademicsOffice;
--- call upload_timetable_slots();
--- select * from TimeSlot;
-
 
 -- DROP TABLE IF EXISTS CourseOffering;
 CREATE TABLE CourseOffering(
@@ -379,9 +370,8 @@ CREATE TABLE CourseOffering(
     FOREIGN key(courseID) REFERENCES CourseCatalogue(courseID)
 );
 GRANT ALL ON CourseOffering to DeanAcademicsOffice;
-GRANT SELECT ON CourseOffering to Students,Faculty,BatchAdvisor;
+GRANT SELECT ON CourseOffering to Students,Faculty,BatchAdvisor,AcademicSection;
 -- select * from courseOffering;
-
 
 -- DROP TABLE IF EXISTS BatchesAllowed;
 CREATE TABLE BatchesAllowed(
@@ -391,7 +381,7 @@ CREATE TABLE BatchesAllowed(
     FOREIGN KEY(courseOfferingID) REFERENCES CourseOffering(courseOfferingID) 
 );
 GRANT ALL ON BatchesAllowed to DeanAcademicsOffice;
-GRANT SELECT ON BatchesAllowed to Students, Faculty, BatchAdvisor;
+GRANT SELECT ON BatchesAllowed to Students, Faculty, BatchAdvisor,AcademicSection;
 
 -- DROP TABLE IF EXISTS Teaches;
 CREATE TABLE Teaches(
@@ -631,11 +621,6 @@ AFTER INSERT ON Student
 FOR EACH ROW
 EXECUTE PROCEDURE postInsertingStudent_trigger_function();
 
--- drop trigger postInsertingStudent on student;
--- drop function postInsertingStudent_trigger_function();
--- drop table student;
-
-
 /* 
  * A = 10
  * A- = 9
@@ -671,8 +656,6 @@ CREATE TABLE DeanAcademicsOfficeTicketTable(
     PRIMARY KEY(studentID, studentTicketID)
 );
 GRANT SELECT ON DeanAcademicsOfficeTicketTable to deanacademicsoffice;
-
-
 
 -- Utility function supporting raiseTicket
 CREATE OR REPLACE PROCEDURE raiseTicketUtil(
@@ -727,7 +710,6 @@ BEGIN
     EXECUTE query;
     
 END; $$;
-
 
 -- Raise ticket procedure for a student..give student a permission to view his/her tickettable
 -- call raiseTicket(7,4,6,1,3,1);
@@ -816,7 +798,7 @@ GRANT EXECUTE ON PROCEDURE raiseTicket to Students;
 
 
 /* stored procedure for the faculty to update its ticket table */
-CREATE OR REPLACE PROCEDURE updateFacultyTicketTable(
+CREATE OR REPLACE PROCEDURE updateFacultyTicketTableUtil(
     IN _insID INTEGER,
     IN _studentTicketID INTEGER,  
     IN _studentID INTEGER,  
@@ -869,8 +851,6 @@ begin
         return;
     END IF;
 
-
-
     tableName := 'FacultyTicketTable_' || _insID::text;
     query := 'UPDATE '|| tableName||'
     SET facultyVerdict = ' || _facultyVerdict::text ||
@@ -906,38 +886,50 @@ begin
     EXECUTE query;
  
 end; $$;
+
+CREATE OR REPLACE PROCEDURE updateFacultyTicketTable(
+    IN _insID INTEGER,
+    IN _studentTicketID INTEGER,  
+    IN _studentID INTEGER,  
+    IN _facultyVerdict BOOLEAN
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare
+    current_user_name TEXT;
+    roleName TEXT;
+begin
+    roleName := 'faculty_' || _insID::text;
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access. Current Logged in User is % and Trying to raise ticket for User %', current_user_name, roleName;
+        return;     
+    end if;
+    call updateFacultyTicketTableUtil(_insID,_studentTicketID,_studentID,_facultyVerdict);
+end; $$;
 REVOKE ALL ON PROCEDURE updateFacultyTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateFacultyTicketTable TO Faculty;
 -- call updateFacultyTicketTable(1,1,1,1::boolean);
 
+
+
 /* Stored procedure to update the ticket table of the batch advisor */
-create or replace procedure updateBatchAdvisorTicketTable(
-    IN _deptName VARCHAR(20),
+create or replace procedure updateBatchAdvisorTicketTableUtil(
+    IN _deptID INTEGER,
     IN _studentTicketID INTEGER,  
     IN _studentID INTEGER,  
     IN _batchAdvisorVerdict BOOLEAN    
 )
 language plpgsql SECURITY DEFINER
 as $$
-declare
+DECLARE
     tableName text;
     query text;
     _insID INTEGER;
     _studentDeptID INTEGER;
-    _deptID INTEGER;
     _validStudentTicketID INTEGER;
     _validStudent INTEGER;
-begin
-    /* find the department ID from the deptName. Checks added for invalid department names */
-    _deptID := -1;
-    select Department.deptID into _deptID 
-    from Department 
-    where Department.deptName = _deptName; 
-    if _deptID = -1 then
-        raise notice 'Incorrect Deparment Name entered!';
-        return;
-    end if;
-    
+BEGIN    
     /* add checks for valid studentID */
     SELECT count(*) INTO _validStudent
     FROM Student 
@@ -1021,6 +1013,35 @@ begin
     ' wHERE '|| tableName||'.TicketID = ' || _studentTicketID::text;
     EXECUTE query; 
 
+end; $$;
+
+create or replace procedure updateBatchAdvisorTicketTable(
+    IN _deptID INTEGER,
+    IN _studentTicketID INTEGER,  
+    IN _studentID INTEGER,  
+    IN _batchAdvisorVerdict BOOLEAN    
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare
+    current_user_name TEXT;
+    roleName TEXT;
+    doesDepartmentExists INTEGER;
+begin
+    select count(*) into doesDepartmentExists 
+    from Department 
+    where Department.deptName = _deptName; 
+    if doesDepartmentExists = 0 then
+        raise notice 'Incorrect Deparment Name entered!';
+        return;
+    end if;
+    roleName := 'batchadvisor_' || _deptID::text;
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access. Current Logged in User is % and Trying to raise ticket for User %', current_user_name, roleName;
+        return;     
+    end if;
+    call updateBatchAdvisorTicketTableUtil(_deptID,_studentTicketID,_studentID,_batchAdvisorVerdict);
 end; $$;
 REVOKE ALL ON PROCEDURE updateBatchAdvisorTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateBatchAdvisorTicketTable TO BatchAdvisor;
@@ -1130,7 +1151,7 @@ begin
                   FROM '||tableName||' 
                   WHERE '||tableName||'.ticketID = '||_studentTicketID::text;
 
-        for (_courseID, _semester, _year, _timeSlotID) IN EXECUTE query loop 
+        for _courseID, _semester, _year, _timeSlotID IN EXECUTE query loop 
             exit;
         end loop;
 
@@ -1159,7 +1180,6 @@ end; $$;
 REVOKE ALL ON PROCEDURE updateDeanAcademicsOfficeTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateDeanAcademicsOfficeTicketTable TO deanacademicsoffice;
 -- call updateDeanAcademicsOfficeTicketTable(1,1,0::boolean);
-
 
 create or replace procedure calculate_current_CGPA(
     IN studentID INTEGER, 
@@ -1682,7 +1702,7 @@ end; $$;
 REVOKE ALL ON PROCEDURE update_grade FROM PUBLIC;
 GRANT ALL ON PROCEDURE update_grade TO Faculty;
 
------------------------------------ Checked till here --------------------------
+
 CREATE TABLE UGCurriculum(
     curriculumID SERIAL,
     batch INTEGER NOT NULL,
@@ -1742,7 +1762,7 @@ begin
                 numCreditsProgramElectives INTEGER NOT NULL,
                 numCreditsScienceCores INTEGER NOT NULL,
                 numCreditsOpenElectives INTEGER NOT NULL,
-                minCGPA INTEGER NOT NULL
+                minCGPA NUMERIC(4,2) NOT NULL
                 );';
     EXECUTE query;
     query := 'GRANT ALL ON '||tableName||' TO DeanAcademicsOffice,AcademicSection';
@@ -1774,6 +1794,7 @@ declare
     alreadyExists INTEGER;
     curriculumID INTEGER;
     query TEXT;
+    _doesCourseExists INTEGER;
 begin
     curriculumID := -1;
     SELECT UGCurriculum.curriculumID INTO curriculumID
@@ -1787,9 +1808,17 @@ begin
 
     IF _courseCategory <> 'Program Core' AND _courseCategory <> 'Science Core' 
         AND _courseCategory <> 'Program Elective' AND _courseCategory <> 'Open Elective' THEN
-        raise notice 'Invalid Course Category entered ... Please try again 1';
+        raise notice 'Invalid Course Category entered ... Please try again !!!';
         return;
     END IF;
+
+    SELECT count(*) INTO _doesCourseExists 
+    FROM CourseCatalogue
+    WHERE CourseCatalogue.courseID = _courseID;
+    if _doesCourseExists = 0 then 
+        raise notice 'Course ID : % does not exists in the Course Catalogue', _courseID;
+        return;
+    end if;
 
     /* Create a dynamic table for the Curriculum List of the given curriculumID*/
     tableName := 'CurriculumList_' || curriculumID::text;
@@ -1847,12 +1876,11 @@ GRANT EXECUTE ON PROCEDURE addCurriculumRequirements TO DeanAcademicsOffice,Acad
 -- call addCurriculumRequirements(2019,1,25,15,10,10,5.0);
 -- call addCurriculumRequirements(2019, 2,25,15,10,10, 5);
 
-
 -- call calculate_current_cgpa(2);
 CREATE OR REPLACE PROCEDURE canGraduate(
     IN _studentID  INTEGER
 )
-language plpgsql SECURITY DEFINER  
+language plpgsql SECURITY INVOKER
 as $$
 declare
     currentCGPA Numeric(4,2);
@@ -1868,21 +1896,26 @@ declare
     undoneOpenElective INTEGER;
     CurriculumRequirementsTableName TEXT;
     query TEXT;
+    rec record;
 begin
     -- first find the deptId and batch of the student
     _deptID := -1;
-    SELECT Student.deptID INTO _deptID
+    SELECT Student.deptID, Student.batch INTO _deptID, _batch
     FROM Student
-    WHERE Student.studentID=_studentID;
+    WHERE Student.studentID = _studentID;
 
     IF _deptID = -1 THEN
-        raise notice 'Incorrect Department ID !!!';
+        raise notice 'Student with ID: % does not exists !!!', _studentID;
         return;
     END IF;
 
-    SELECT Student.batch INTO _batch
-    FROM Student
-    WHERE Student.studentID = _studentID;
+    -- transcript table of the student
+    transcriptTable := 'transcript_' || _studentID::text;
+    query := 'SELECT *
+            FROM '||transcriptTable;
+    for rec in EXECUTE query loop
+        exit;
+    end loop;
     
     curriculumID := -1;
     select UGCurriculum.curriculumID into curriculumID
@@ -1894,43 +1927,30 @@ begin
         return;
     END IF;
     
-    
     CurriculumRequirementsTableName := 'CurriculumRequirements_' || curriculumID::text;
     query:= 'SELECT minCGPA FROM '|| CurriculumRequirementsTableName;
     FOR minCGPA in EXECUTE query loop
         exit;
     end loop;
 
-
     -- Check if the student has a minimum of 5 CGPA or not
     CALL calculate_current_CGPA(_studentID, currentCGPA);
     raise notice 'Current CGPA is: %', currentCGPA;
 
-
     IF currentCGPA < minCGPA THEN
-        raise notice 'CGPA criteria not satisfied as per the UG Curriculum!!!';
+        raise notice 'CGPA criteria of % not satisfied as per the UG Curriculum!!!', minCGPA;
         return;
     END IF;
-
-    -- find the curriculum id of the UG curriculum that the student is enrolled in
-    SELECT UGCurriculum.curriculumID INTO curriculumID
-    FROM UGCurriculum
-    WHERE UGCurriculum.deptID = _deptID AND UGCurriculum.batch = _batch;
 
     -- Curriculum List for currcilumID
     curriculumList := 'CurriculumList_' || curriculumID::text;
 
-    -- transcript table of the student
-    transcriptTable := 'Transcript_' || _studentID::text;
-    
     -- Check if the student has done all the courses mentioned in its program core
-
     query:= 'SELECT count(*) 
             FROM ' || curriculumList ||
             ' WHERE ' || curriculumList || '.courseCategory = ''Program Core'' 
                 AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || ' 
-                WHERE grade<>''F'' AND grade IS NOT NULL)';
-
+                WHERE grade IS NOT NULL AND grade<>''F'')';
     for undoneProgramCore IN EXECUTE query LOOP
         exit;
     END LOOP;
@@ -1946,7 +1966,7 @@ begin
             FROM ' || curriculumList ||
             ' WHERE ' || curriculumList|| '.courseCategory=''Program Elective'' 
             AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
-                                ' WHERE grade <>''F'' AND grade IS NOT NULL)';
+                                ' WHERE grade IS NOT NULL AND grade<>''F'')';
 
     for undoneProgramElective IN EXECUTE query LOOP
         exit;
@@ -1961,42 +1981,40 @@ begin
     query:= 'SELECT count(*) FROM ' || curriculumList ||
     ' WHERE ' || curriculumList|| '.courseCategory=''Science Core'' 
     AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
-    ' WHERE grade<>''F'' AND grade IS NOT NULL)';
+    ' WHERE grade IS NOT NULL AND grade<>''F'')';
 
     for undoneScienceCore IN EXECUTE query LOOP
         exit;
     END LOOP;
 
-    IF undoneScienceCore<>0 THEN 
+    IF undoneScienceCore <> 0 THEN 
         raise notice 'All Science Cores have not been completed!!!';
         return;
     END IF;
 
     -- Check if the student has done all the courses mentioned in its open electives
-
     query:= 'SELECT count(*) FROM ' || curriculumList ||
     ' WHERE ' || curriculumList|| '.courseCategory = ''Open Elective'' 
     AND courseID NOT IN (SELECT courseID FROM ' || transcriptTable || 
-    ' WHERE grade<>''F'' AND grade IS NOT NULL)';
-
+    ' WHERE grade IS NOT NULL AND grade<>''F'')';
     for undoneOpenElective IN EXECUTE query LOOP
         exit;
     END LOOP;
-
     IF undoneOpenElective <> 0 THEN 
         raise notice 'All Open Electives have not been completed!!!';
         return;
     END IF;
 
-    raise notice 'Congratulations! You are eligible to graduate.';
+    raise notice 'Congratulations! You are eligible to graduate !!!';
 end; $$;
-call canGraduate(2);
-
-
+REVOKE ALL ON PROCEDURE canGraduate FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE canGraduate TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice, AcademicSection;
+-- call canGraduate(2);
 
 /* Giving sequence permission to deanacademicsoffice */
-GRANT USAGE, SELECT 
-ON ALL SEQUENCES IN SCHEMA public 
-TO DeanAcademicsOffice;
+-- GRANT USAGE, SELECT 
+-- ON ALL SEQUENCES IN SCHEMA public 
+-- TO DeanAcademicsOffice;
+
 
 

@@ -1,4 +1,3 @@
 1. make a test case to check 1.25 rule
 
 unnecessary things to create just in case you have some extra time to kill:
-14. **************raise ticket only when credit limit has been exceeded credit-limit and the course-offering-restrictions,
