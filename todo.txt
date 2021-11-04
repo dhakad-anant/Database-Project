@@ -1,8 +1,4 @@
-6. ********************implement printGradeSheet stored procedure (Report generation)
-10. ****************see the permissions aspect for this code
-13. generate queries for test cases
-14. **************raise ticket only when credit limit has been exceeded credit-limit and the course-offering-restrictions,
-16. make section id in teaches and courseofferingId in courseoffering as serial
-19. ****************A student can see only his/her grades. But a faculty or Dean Academics office can see all the grades.
+1. make a test case to check 1.25 rule
 
 unnecessary things to create just in case you have some extra time to kill:
+14. **************raise ticket only when credit limit has been exceeded credit-limit and the course-offering-restrictions,

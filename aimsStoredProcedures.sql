@@ -421,7 +421,7 @@ begin
     if idealUser<>currentUser then
         raise notice 'USers are different';
     end if;
-    
+
     raise notice '%',currentUser;
 end; $$;
 call test_test(1);
@@ -456,32 +456,7 @@ end; $$;
 
 
 /* Export INTO a csv file************************************************************************************************ */
-create or replace procedure exportTranscript(
-    _studentID integer
-)
-language plpgsql SECURITY INVOKER
-as $$
-declare
-    tableName text;
-    _fileName text;
-begin
-    tableName := 'transcript_' || _studentID::text;
-    _fileName := 'ReportStudent_' || _studentID::text;
-    call exportTableIntoCSV(tableName, _fileName);
-end; $$;
 
-create or replace procedure exportTableIntoCSV(
-    tableName text,
-    _fileName text
-)
-language plpgsql SECURITY DEFINER
-as $$
-declare
-    query text;
-begin
-    query := 'COPY '||tableName||' to ''C:\media\'||_fileName||'.csv'' DELIMITER '','' CSV HEADER';
-    EXECUTE query;
-end; $$;
 /* ************************************************************************************************************ */
 
 

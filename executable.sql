@@ -27,7 +27,7 @@ CREATE TABLE CourseCatalogue(
 );
 -- select * from CourseCatalogue;
 GRANT ALL ON CourseCatalogue TO DeanAcademicsOffice;
-GRANT SELECT ON CourseCatalogue TO Faculty, BatchAdvisor;
+GRANT SELECT ON CourseCatalogue TO Students, Faculty, BatchAdvisor;
 
 create or replace procedure updateCourseCatalogue(
     IN _courseID INTEGER,
@@ -230,6 +230,7 @@ CREATE TABLE Instructor(
 );
 /* Only the DeanAcademicsOffice can modify the Instructor table, no one else can */
 GRANT ALL ON Instructor to DeanAcademicsOffice;
+GRANT SELECT ON Instructor to Students,Faculty,BatchAdvisor,AcademicSection;
 
 
 /* On adding a new instructor to the instructor table, we create a seperate ticket table for each faculty */
@@ -406,7 +407,7 @@ CREATE TABLE Teaches(
     FOREIGN key(timeSlotID) REFERENCES TimeSlot(timeSlotID)
 );  
 GRANT ALL ON Teaches to DeanAcademicsOffice;
-GRANT SELECT ON Teaches to BatchAdvisor;
+GRANT SELECT ON Teaches to BatchAdvisor,Students,Faculty, AcademicSection;
 
 CREATE OR REPLACE PROCEDURE InsertIntoTeaches(
     IN _insID INTEGER,
@@ -556,8 +557,8 @@ CREATE TABLE Student(
     primary key(studentID),
     FOREIGN key(deptID) REFERENCES Department(deptID) 
 );
-GRANT ALL ON PROCEDURE Student to DeanAcademicsOffice,academicsection;
-GRANT SELECT ON PROCEDURE Student to Faculty, BatchAdvisor;
+GRANT ALL ON Student to DeanAcademicsOffice,academicsection;
+GRANT SELECT ON Student to Students, Faculty, BatchAdvisor;
 
 
 CREATE or replace FUNCTION postInsertingStudent_trigger_function()
@@ -596,7 +597,7 @@ begin
     
     EXECUTE query;
     /* Security Feature: Only the student itself can view his transcript table. NO other student can view the transcript table of any other student. Additionally the faculty's, batch advisors, dean office can view his/her transcript */
-    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice';
+    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice,AcademicSection';
     EXECUTE query;
 
     /* Create seperate ticket table for each student */
@@ -618,7 +619,7 @@ begin
     
     EXECUTE query; 
     /* Secuirty Feature */
-    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice';
+    query := 'GRANT SELECT ON '|| tableName ||' to '||roleName||',Faculty, BatchAdvisor, DeanAcademicsOffice,AcademicSection';
     EXECUTE query;
 
     return new;
@@ -808,11 +809,7 @@ BEGIN
         return;
     end if;
 
-    -- query := 'GRANT EXECUTE ON PROCEDURE raiseTicketUtil to '||roleName;
-    -- EXECUTE query;
     call raiseTicketUtil(_insID,_studentID,_studentTicketID,_semester,_year,_timeSlotID,_courseID);  
-    -- query := 'REVOKE EXECUTE ON PROCEDURE raiseTicketUtil FROM '||roleName; 
-    -- EXECUTE query; 
 END; $$;
 REVOKE ALL ON PROCEDURE raiseTicket FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE raiseTicket to Students;
@@ -1163,11 +1160,12 @@ REVOKE ALL ON PROCEDURE updateDeanAcademicsOfficeTicketTable FROM PUBLIC;
 GRANT EXECUTE ON PROCEDURE updateDeanAcademicsOfficeTicketTable TO deanacademicsoffice;
 -- call updateDeanAcademicsOfficeTicketTable(1,1,0::boolean);
 
+
 create or replace procedure calculate_current_CGPA(
     IN studentID INTEGER, 
     INOUT currentCGPA NUMERIC(4,2) 
 )
-language plpgsql SECURITY INVOKER  
+language plpgsql SECURITY DEFINER  
 as $$
 declare
     transcriptTable text;
@@ -1198,16 +1196,14 @@ begin
     
     if totalCredits<>0 then
         CGPA := (numerator/totalCredits)::NUMERIC(4, 2);
-    elsif 
-        CGPA:=0
+    else
+        CGPA:=0;
     end if;
     currentCGPA := CGPA;
-    -- raise notice 'CGPA for studentID % is %',studentID,CGPA;
 end; $$;
-REVOKE ALL ON PROCEDURE calculate_current_CGPA FROM PUBLIC;
 
 create or replace procedure print_current_CGPA(
-    IN studentID INTEGER 
+    IN _studentID INTEGER 
 )
 language plpgsql SECURITY INVOKER   
 as $$
@@ -1215,34 +1211,104 @@ declare
     currentCGPA NUMERIC(4, 2) := 0;
     query TEXT;
     roleName TEXT;
+    current_user_name TEXT;
 begin
-    roleName := 'Student_' || studentID::text;
-    query := 'GRANT EXECUTE ON PROCEDURE calculate_current_CGPA TO '||roleName;
-    EXECUTE query;
-    call calculate_current_CGPA(studentID, currentCGPA);
-    query := 'REVOKE EXECUTE ON PROCEDURE calculate_current_CGPA FROM '||roleName;
-    EXECUTE query;
-    raise notice 'CGPA for studentID % is %',studentID,currentCGPA;
+    roleName := 'student_' || _studentID::text;
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access. Current Logged in User is % and Trying to raise ticket for User %', current_user_name, roleName;
+        return;     
+    end if;
+    call calculate_current_CGPA(_studentID, currentCGPA);
+    raise notice 'CGPA for student ID % is %',_studentID, currentCGPA;
 end; $$;
+REVOKE ALL ON PROCEDURE print_current_CGPA FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE print_current_CGPA TO Students;
 
 
------------------------------------ Checked till here --------------------------
-
--- need faculty grade table before running this
-create or replace procedure RegisterStudent(
-    IN _studentID INTEGER,
-    IN _courseCode VARCHAR(10),
-    IN _semester INTEGER,
-    IN _year INTEGER,
-    IN _insName VARCHAR(50),
-    IN _slotName VARCHAR(20)
+CREATE OR REPLACE PROCEDURE exportTableIntoCSV(
+    tableName text,
+    _fileName text
 )
 language plpgsql SECURITY DEFINER
+as $$
+declare
+    query text;
+begin
+    query := 'COPY '||tableName||' to ''C:\media\'||_fileName||'.csv'' DELIMITER '','' CSV HEADER';
+    EXECUTE query;
+end; $$;
+
+CREATE OR REPLACE PROCEDURE exportTranscript(
+    _studentID INTEGER
+)
+language plpgsql SECURITY INVOKER
+as $$
+DECLARE
+    tableName text;
+    _fileName text;
+    rec record;
+    query TEXT;
+    doesStudentExist INTEGER;
+BEGIN
+    SELECT count(*) INTO doesStudentExist
+    FROM Student
+    WHERE Student.studentID = _studentID;
+    if doesStudentExist = 0 then
+        raise notice 'Student with ID: % does not exists',_studentID;
+        return;
+    end if;
+    tableName := 'transcript_' || _studentID::text;
+    query := 'SELECT * FROM '||tableName;
+    for rec in EXECUTE query loop
+        exit;
+    end loop;
+    _fileName := 'ReportStudent_' || _studentID::text;
+    call exportTableIntoCSV(tableName, _fileName);
+end; $$;
+REVOKE ALL ON PROCEDURE exportTranscript FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE exportTranscript TO Students, Faculty, BatchAdvisor, DeanAcademicsOffice, AcademicSection;
+
+create or replace procedure registerStudentUtil( 
+    IN _courseID  INTEGER,
+    IN  _semester  INTEGER,
+    IN  _year  INTEGER,
+    IN  _timeSlotID  INTEGER,
+    IN  _studentID  INTEGER,
+    IN _sectionID INTEGER
+)
+language plpgsql SECURITY DEFINER
+as $$
+declare
+    query TEXT;
+    studentTrancriptTableName TEXT;
+    facultyGradeTableName TEXT;
+begin
+-- stored procedure body
+    studentTrancriptTableName:= 'Transcript_' || _studentID::text;
+    query := 'INSERT INTO ' || studentTrancriptTableName ||'(courseID, semester, year, timeSlotID) 
+    VALUES ('||_courseID::text||','||_semester::text||','||_year::text||','||_timeSlotID::text||')';    
+    EXECUTE query;
+
+    facultyGradeTableName := 'FacultyGradeTable_' || _sectionID::text;
+    query := 'INSERT INTO ' || facultyGradeTableName ||'(studentID) VALUES ('||_studentID::text||')';
+    EXECUTE query;
+end; $$;
+
+-- call RegisterStudent(7,1,1,2,5,3);
+CREATE OR REPLACE PROCEDURE RegisterStudent(
+    IN _studentID INTEGER,
+    IN _courseID INTEGER,
+    IN _semester INTEGER,
+    IN _year INTEGER,
+    IN _insID INTEGER,
+    IN _timeSlotID INTEGER
+)
+language plpgsql SECURITY INVOKER
 as $$
 declare 
     studentTrancriptTableName text;
     facultyGradeTableName text;
-    
     prevCredit NUMERIC(4,2);
     prevPrevCredit NUMERIC(4,2);
     averageCredits NUMERIC(10,2);
@@ -1252,48 +1318,71 @@ declare
     totalPreRequisite INTEGER;
     totalPreRequisiteSatisfied INTEGER;
     clash INTEGER;
-    insId INTEGER;
+    -- insId INTEGER;
     ifslot INTEGER;
-    _timeSlotID INTEGER;
-    _insId INTEGER;
+    -- _timeSlotID INTEGER;
+    -- _insID INTEGER;
     totalClashes INTEGER;
     currentCGPA NUMERIC(4,2);
     cgpaRequired NUMERIC(4,2);
-    _courseID INTEGER;
+    _doesCourseOfferingExists INTEGER;
+    _doesInstructorExists INTEGER;
+    _doesTeachesExists INTEGER;
+    _doesTimeSlotExists  INTEGER;
+    -- _courseID INTEGER;
     query text;
     _sectionID INTEGER;
+    current_user_name TEXT;
+    roleName TEXT;
 begin
-    -- Computing the Course Id
-    _courseID := -1;
-    SELECT CourseCatalogue.courseID INTO _courseID
-    FROM CourseCatalogue
-    WHERE CourseCatalogue.courseCode = _courseCode;
-    IF _courseID = -1 THEN 
-        raise notice 'Course Does not Exist!';
+    roleName := 'student_' || _studentID::text;
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access. Current Logged in User is % and Trying to register %', current_user_name, roleName;
+        return;     
+    end if;
+    --  Checking whether the instructor ID is valid
+    SELECT count(*) INTO _doesInstructorExists
+    FROM Instructor
+    WHERE Instructor.insID = _insID;
+    IF _doesInstructorExists = 0 THEN
+        raise notice 'Instructor with id: % does not exist!',_insID;
         return;
     END IF;
 
+    -- Check whether the course exists in the course offering or not
+    SELECT count(*) INTO _doesCourseOfferingExists
+    FROM CourseOffering
+    WHERE CourseOffering.courseID = _courseID
+        AND CourseOffering.semester = _semester
+        AND CourseOffering.year = _year
+        AND CourseOffering.timeSlotID = _timeSlotID;
+    IF _doesCourseOfferingExists = 0 THEN 
+        raise notice 'Course Offering does not exist !!!';
+        return;
+    END IF;
 
-    --  Computing the Instructor Id
-    _insId := -1;
-    SELECT Instructor.insId INTO _insId
-    FROM Instructor
-    WHERE Instructor.insName=_insName;
-
-    IF _insId = -1 THEN
-        raise notice 'Instructor does not exist!';
+    -- check whether the teaches table have the entry for the given attributes
+    SELECT count(*) INTO _doesTeachesExists
+    FROM Teaches
+    WHERE Teaches.courseID = _courseID
+        AND Teaches.semester = _semester
+        AND Teaches.year = _year
+        AND Teaches.timeSlotID = _timeSlotID
+        AND Teaches.insID=_insID;
+    
+    IF _doesTeachesExists = 0 THEN 
+        raise notice 'This instuctor is not taking this course offering!!';
         return;
     END IF;
 
 
     -- Fetching the transcript table for each student
     studentTrancriptTableName:= 'Transcript_' || _studentID::text;
-
     query := 'SELECT sum(CourseCatalogue.C)
             FROM ' || studentTrancriptTableName || ', CourseCatalogue
             WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
             AND ' ||studentTrancriptTableName || '.semester = ' || _semester::text;
-
     FOR currentCredit in EXECUTE query LOOP 
         exit;
     END LOOP;
@@ -1306,8 +1395,8 @@ begin
 
     currentCredit := currentCredit+ courseCredit;
 
-    -- check 1.25 rule
-    prevCredit:=-1;
+    -- checking 1.25 rule
+    prevCredit := -1;
     query := 'SELECT sum(CourseCatalogue.C)
             FROM ' || studentTrancriptTableName || ', CourseCatalogue
             WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
@@ -1316,7 +1405,6 @@ begin
                                             OR 
                 ('||studentTrancriptTableName||'.year = $3 and '||studentTrancriptTableName||'.semester = 1 and $4 = 2) 
             )';
-
     FOR prevCredit IN EXECUTE query using _year - 1, _semester, _year, _semester  loop 
         exit;
     end loop;
@@ -1347,11 +1435,10 @@ begin
     end if;
 
 
-    -- check if he/she fullfills all preReqs 
+    -- checking if the student fullfills all the required pre requisites 
     SELECT count(*) INTO totalPreRequisite
     FROM PreRequisite
     WHERE PreRequisite.courseId = _courseID;
-
     query := 'SELECT count(*)
             FROM ' || studentTrancriptTableName || ', PreRequisite
             WHERE PreRequisite.courseID = $1 
@@ -1359,22 +1446,20 @@ begin
             AND grade<>''F'' and grade IS NOT NULL 
             AND '||studentTrancriptTableName||'.semester <> $2 
             AND '||studentTrancriptTableName||'.year <> $3';
-
     for totalPreRequisiteSatisfied in EXECUTE query using _courseID, _semester, _year loop 
         exit;
     end loop;
-
     if totalPreRequisite <> totalPreRequisiteSatisfied then
         raise notice 'All PreRequisite not Satisfied!';
         return;
     end if;
 
+
     -- If time slot exists or not
-    _timeSlotID := -1;
-    select TimeSlot.timeSlotID into _timeSlotID 
-    from TimeSlot
-    where TimeSlot.slotName = _slotName;
-    if _timeSlotID = -1 then
+    SELECT count(*) INTO _doesTimeSlotExists 
+    FROM TimeSlot
+    WHERE TimeSlot.timeSlotID = _timeSlotID;
+    if _doesTimeSlotExists = 0 then
         raise notice 'Entered Time SLot does not exist !!!';
         return;
     end if;
@@ -1388,15 +1473,14 @@ begin
             AND '||studentTrancriptTableName||'.year = $2
             AND teaches.insID = $3 
             AND teaches.timeSlotID= $4';
-
-    for totalClashes in EXECUTE query using _semester, _year, _insId, _timeSlotID loop 
+    for totalClashes in EXECUTE query using _semester, _year, _insID, _timeSlotID loop 
         exit;
     end loop;
-    
     if totalClashes <> 0 then 
         raise notice 'Course with same time slot already enrolled in this semester';
         return;
     end if;
+
 
     -- check course cgpa requirement
     call calculate_current_CGPA(_studentID,currentCGPA);
@@ -1417,29 +1501,15 @@ begin
     WHERE Teaches.courseID = _courseID 
         AND Teaches.semester = _semester 
         AND Teaches.year = _year 
-        AND Teaches.insID = _insId 
+        AND Teaches.insID = _insID 
         AND Teaches.timeSlotID = _timeSlotID;
 
-    raise notice 'section Id: %',_sectionID;
-    
-    facultyGradeTableName := 'FacultyGradeTable_' || _sectionID::text;
-
-    query := 'INSERT INTO ' || facultyGradeTableName ||'(studentID) VALUES ('||_studentID::text||')';
-
-    EXECUTE query;
-
-    query := 'INSERT INTO ' || studentTrancriptTableName ||'(courseID, semester, year, timeSlotID) 
-    VALUES ('||_courseID::text||','||_semester::text||','||_year::text||','||_timeSlotID::text||')';
-    
-    EXECUTE query;
+    call registerStudentUtil(_courseID,_semester,_year,_timeSlotID,_studentID,_sectionID);    
 end; $$; 
-
 REVOKE ALL ON PROCEDURE RegisterStudent FROM PUBLIC;
+GRANT EXECUTE ON PROCEDURE RegisterStudent TO Students;
 
-GRANT EXECUTE ON PROCEDURE RegisterStudent TO students;
-
-
-create or replace procedure upload_grades_csv(
+create or replace procedure upload_grades_csv_util(
     IN _sectionID INTEGER
 )
 language plpgsql SECURITY DEFINER
@@ -1506,13 +1576,44 @@ begin
     query := 'DROP TABLE ' || tableName; 
     EXECUTE query;
 end; $$;
--- call upload_grades_csv(4);
 
 
-create or replace procedure update_grade(
+create or replace procedure upload_grades_csv(
+    IN _sectionID INTEGER
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare
+    current_user_name TEXT;
+    _insID INTEGER;
+    roleName TEXT;
+begin
+    _insID := -1;
+    SELECT Teaches.insID INTO _insID
+    FROM Teaches
+    WHERE Teaches.sectionID = _sectionID;
+
+    IF _insID = -1 THEN 
+        raise notice 'Entered Section ID : % does not exists in the data base', _sectionID;
+        return;
+    END IF;
+
+    roleName := 'faculty_' || _insID::text; 
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access, current logged in user: % and actual faculty as per records: %', current_user_name, roleName;
+        return;
+    end if;
+
+    call upload_grades_csv_util(_sectionID);
+end; $$;
+REVOKE ALL ON PROCEDURE upload_grades_csv FROM PUBLIC;
+GRANT ALL ON PROCEDURE upload_grades_csv TO Faculty;
+
+create or replace procedure update_grade_util(
     IN _sectionID INTEGER,
     IN _studentID INTEGER,
-    IN _temp_grade VARCHAR(2)
+    IN _grade VARCHAR(2)
 )
 language plpgsql SECURITY DEFINER
 as $$
@@ -1529,26 +1630,59 @@ begin
     studentTrancriptTableName := 'Transcript_' || _studentID::text; 
     
     SELECT Teaches.courseID, Teaches.semester, Teaches.year, Teaches.timeSlotID 
-        INTO courseID, semester, year, timeSlotID
+            INTO courseID, semester, year, timeSlotID
     FROM Teaches
     WHERE Teaches.sectionID = _sectionID;
     
     query := 'UPDATE '||studentTrancriptTableName||
-    ' SET grade = '||''''||_temp_grade::text||''''||
+    ' SET grade = '||''''||_grade::text||''''||
     ' WHERE '||studentTrancriptTableName||'.courseID = '||courseID::text||
         ' AND '||studentTrancriptTableName||'.semester = '||semester::text||
         ' AND '||studentTrancriptTableName||'.year = '||year::text||
         ' AND '||studentTrancriptTableName||'.timeSlotID = '||timeSlotID::text;            
     EXECUTE query;             
     
-
     query :=  'UPDATE '||facultygradeTableName||' 
-                SET grade = '||''''||_temp_grade::text||''''||
+                SET grade = '||''''||_grade::text||''''||
                 ' WHERE '||facultygradeTableName||'.studentID = '||_studentID::text;
     EXECUTE query;        
 end; $$;
--- call update_grade(4,2,'B');
 
+
+create or replace procedure update_grade(
+    IN _sectionID INTEGER,
+    IN _studentID INTEGER,
+    IN _grade VARCHAR(2)
+)
+language plpgsql SECURITY INVOKER
+as $$
+declare 
+    current_user_name TEXT;  
+    roleName TEXT;  
+    _insID INTEGER;
+begin
+    _insID := -1;
+    SELECT Teaches.insID INTO _insID
+    FROM Teaches
+    WHERE Teaches.sectionID = _sectionID;
+
+    IF _insID = -1 THEN 
+        raise notice 'Entered Section ID : % does not exists in the data base', _sectionID;
+        return;
+    END IF;
+    
+    roleName := 'faculty_' || _insID::text; 
+    SELECT current_user INTO current_user_name;
+    if current_user_name <> roleName then
+        raise notice 'Illegal Access, current logged in user: % and actual faculty as per records: %', current_user_name, roleName;
+        return;
+    end if;
+    call update_grade_util(_sectionID, _studentID, _grade);  
+end; $$;
+REVOKE ALL ON PROCEDURE update_grade FROM PUBLIC;
+GRANT ALL ON PROCEDURE update_grade TO Faculty;
+
+----------------------------------- Checked till here --------------------------
 create Table UGCurriculum(
     curriculumID SERIAL PRIMARY KEY,
     batch INTEGER NOT NULL,
@@ -1661,8 +1795,6 @@ create table CurriculumRequirements_{curriculumID}(
     numCreditsOpenElectives INTEGER NOT NULL,
     minCGPA NUMERIC(4,2) NOT NULL
 );
-
-
 /* procedure to add to CurriculumList */
 create or replace procedure addCurriculumRequirements(
     IN _batch INTEGER,
