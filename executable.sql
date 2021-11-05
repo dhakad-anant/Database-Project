@@ -739,6 +739,24 @@ declare
     _studentTicketID INTEGER;
     _deptID INTEGER;
     _doesCourseExists INTEGER;
+    
+
+    totalClashes INTEGER;
+
+    courseCredit NUMERIC(4,2);
+    currentCredit NUMERIC(4,2);
+    prevCredit NUMERIC(10,2);
+    prevPrevCredit NUMERIC(10,2);
+    studentTrancriptTableName TEXT;
+    averageCredits NUMERIC(10,2);
+    maxCreditsAllowed NUMERIC(10,2);
+    currentCGPA NUMERIC(4,2);
+    cgpaRequired NUMERIC(4,2);
+    _courseOfferingID INTEGER;
+    _batch INTEGER;
+    _isBatchAllowed INTEGER;
+
+
 BEGIN
     SELECT current_user INTO current_user_name;
     roleName := 'student_' || _studentID::text;
@@ -796,6 +814,107 @@ BEGIN
         return;
     end if;
 
+    
+    /* START */
+    /*  Cannot raise a ticket if neither 1.25 rule is violated nor CGPA criteria is vioalted nor batches allowed is violated */
+    studentTrancriptTableName := 'transcript_' || _studentID::text; 
+
+    query := 'SELECT count(*) 
+                FROM  ' || studentTrancriptTableName ||' 
+                WHERE ' || studentTrancriptTableName ||'.year = '|| _year::text||' 
+                AND ' || studentTrancriptTableName||'.semester='||_semester::text||'
+                AND ' || studentTrancriptTableName||'.timeSlotID=' || _timeSlotID::text;
+    for totalClashes in EXECUTE query loop 
+        exit;
+    end loop;
+    if totalClashes <> 0 then 
+        raise notice 'Course with same time slot already enrolled in this semester ... Cannot raise a ticket !!!';
+        return;
+    end if;
+
+    query := 'SELECT sum(CourseCatalogue.C)
+            FROM ' || studentTrancriptTableName || ', CourseCatalogue
+            WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            AND ' ||studentTrancriptTableName || '.semester = ' || _semester::text ||
+            ' AND ' ||studentTrancriptTableName || '.year = ' || _year::text;
+    FOR currentCredit in EXECUTE query LOOP 
+        exit;
+    END LOOP;
+    
+    if currentCredit IS NULL then
+        currentCredit := 0.0;
+    end if;
+    
+    SELECT CourseCatalogue.C INTO courseCredit
+    from CourseCatalogue
+    where CourseCatalogue.courseId = _courseID;
+
+    currentCredit := currentCredit + courseCredit;
+
+    prevCredit := -1;
+    query := 'SELECT sum(CourseCatalogue.C)
+            FROM ' || studentTrancriptTableName || ', CourseCatalogue
+            WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            AND (
+                ('||studentTrancriptTableName||'.year = $1 and '||studentTrancriptTableName||'.semester = 2 and $2 = 1)
+                                            OR 
+                ('||studentTrancriptTableName||'.year = $3 and '||studentTrancriptTableName||'.semester = 1 and $4 = 2) 
+            )';
+    FOR prevCredit IN EXECUTE query using _year - 1, _semester, _year, _semester  loop 
+        exit;
+    end loop;
+
+    prevPrevCredit := -1;
+    query := 'SELECT SUM(CourseCatalogue.C)
+            FROM ' || studentTrancriptTableName || ', CourseCatalogue
+            WHERE ' || studentTrancriptTableName ||'.courseID = CourseCatalogue.courseID 
+            AND '||studentTrancriptTableName||'.year = $1 AND '||studentTrancriptTableName||'.semester = $2';
+
+    for prevPrevCredit in EXECUTE query using _year - 1, _semester  loop 
+        exit;
+    end loop;
+
+    if prevCredit = 0 OR prevcredit IS NULL then
+        maxCreditsAllowed := 4;
+    elsif prevPrevCredit = 0 OR prevPrevCredit IS NULL then
+        maxCreditsAllowed := 4;
+    else 
+        averageCredits := (prevCredit + prevPrevCredit)/2;
+        maxCreditsAllowed := averageCredits * 1.25;
+    end if;
+
+    
+    call calculate_current_CGPA(_studentID,currentCGPA);
+    select CourseOffering.cgpaRequired into cgpaRequired
+    from CourseOffering
+    where CourseOffering.courseID = _courseID 
+        AND CourseOffering.semester = _semester 
+        AND CourseOffering.year = _year;
+    if cgpaRequired is NULL then 
+        cgpaRequired := 0.0;
+    end if;
+
+
+    SELECT Student.batch into _batch
+    From Student
+    where Student.studentID = _studentID;    
+    
+    SELECT courseOffering.courseOfferingID INTO _courseOfferingID
+    FROM CourseOffering
+    WHERE CourseOffering.courseID = _courseID
+        AND CourseOffering.semester = _semester
+        AND CourseOffering.year = _year
+        AND CourseOffering.timeSlotID = _timeSlotID;    
+    
+    SELECT count(*) INTO _isBatchAllowed 
+    FROM BatchesAllowed
+    WHERE BatchesAllowed.courseOfferingID = _courseOfferingID AND BatchesAllowed.batch = _batch;
+
+    if (currentCredit <= maxCreditsAllowed) AND (currentCGPA >= cgpaRequired) AND (_isBatchAllowed <> 0) then 
+        raise notice  'Neither 1.25 rule is violated, neither CGPA criteria is violated, nor batches allowed is violated. So cannot raise a ticket !!!';
+        return;
+    end if;
+    /* END */
     call raiseTicketUtil(_insID,_studentID,_studentTicketID,_semester,_year,_timeSlotID,_courseID);  
 END; $$;
 REVOKE ALL ON PROCEDURE raiseTicket FROM PUBLIC;

@@ -97,14 +97,6 @@ INSERT INTO GradeMapping(grade, val)
           ('C-', 5),
           ('F', 0);
 
--- CREATE OR REPLACE PROCEDURE RegisterStudent(
---     IN _studentID INTEGER,
---     IN _courseID INTEGER,
---     IN _semester INTEGER,
---     IN _year INTEGER,
---     IN _insID INTEGER,
---     IN _timeSlotID INTEGER
--- )
 
 -- RegisterStudent(_studentID,_courseID,_semester,_year,_insID,_timeSlotID)
 SET ROLE student_1;
@@ -147,8 +139,14 @@ CALL upload_grades_csv(8);
 RESET ROLE;
 
 -- 13, 32
-set role student1;
+raiseTicket( _studentID, _insID, _courseID, _semester, _year, _timeSlotID);
+set role student_1;
 call raiseticket(1,4,4,1,3,1);
+call raiseticket(1,3,10,1,2,1);
+call raiseticket(1,3,9,1,1,2);
+reset role;
+set role student_4;
+call raiseticket(4,3,9,1,1,2); -- to check no rule violation
 reset role;
 
 call addUGCurriculum(2019,1); 

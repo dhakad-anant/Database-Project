@@ -58,8 +58,11 @@
                 Only the student itself can raise a ticket for itself no one else on his behalf can raise a ticket for him.
                 
         * When can a Ticket be raised?
-                * If the students batch is allowed in the list of allowed batches
+                * If the students batch is not allowed in the list of allowed batches
                 * If he has not already called raised a ticket for the same cause before. Note that this is an important security feature as this avoids spamming the database and prevents its from actual hacking.
+                * If the 1.25 rule is violated
+                * If the CGPA criteria is not satisfied
+                * If there is not a clash of time slot with existing course in the current semester and year.
 
         * View rights:
                 Only the owner can see his/her table.
