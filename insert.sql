@@ -10,7 +10,7 @@ call upload_timetable_slots();
     friday VARCHAR(20),
     
     PRIMARY KEY(timeSlotID)
-); */
+);*/
 /* 
     TimeslotId,TimeSlotName,Duration (mins),Monday,Tuesday,Wednesday,Thrusday,Friday
     1,PCE1,50,9:00 AM,10:00 AM,11:00 AM,12:00 PM,1:00 PM
@@ -24,6 +24,8 @@ INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (8,'CS102',3,1
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (9,'CS103',3,1,3,6,4);
 
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (10,'CS104',3,1,3,6,0.5);
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (11,'MA101',3,1,3,6,3);
+INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (12,'MA202',3,1,3,6,3);
 
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (1,'CS201',3,1,2,6,3);
 INSERT INTO CourseCatalogue(CourseID,courseCode,L,T,P,S,C) VALUES (2,'CS202',3,1,2,6,4);
@@ -125,6 +127,7 @@ call RegisterStudent(2,8,2,1,2,1);
 RESET ROLE;
 SET ROLE student_2;
 call RegisterStudent(2,9,1,1,3,2);
+call registerstudent(2,10,1,2,3,1);
 RESET ROLE;
 
 SET ROLE student_3;
@@ -144,45 +147,10 @@ CALL upload_grades_csv(8);
 RESET ROLE;
 
 -- 13, 32
-/* **************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************** */
-insert into course_catalogue(course_id, name, L, T, P) values ('CS303', 'Operating System', 5, 5, 5); 
-insert into course_catalogue(course_id, name, L, T, P) values ('CS203', 'Pta nahi System', 5, 5, 5); 
-insert into course_catalogue(course_id, name, L, T, P) values ('CS201', 'Data sturcture', 5, 5, 5); 
-insert into course_catalogue(course_id, name, L, T, P) values ('CS202', 'Dekh lo', 5, 5, 5); 
-insert into prerequisites(course_id, prerequisite_course_id) values ('CS303', 'CS203'); 
-insert into prerequisites(course_id, prerequisite_course_id) values ('CS303', 'CS202'); 
-insert into prerequisites(course_id, prerequisite_course_id) values ('CS303', 'CS201'); 
-insert into course_offering(course_id, year, semester, section_id, instructor_id, classroom, cgpa_requirement, slot_number) 
-values ('CS301', 2000, 2, 'two', 'VSCS301', 'dekh lo', 8.2, 3); 
-insert into time_slots(monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end) values ('16:00', '17:00', '10:20', '11:20', '9:00', '10:00', '14:45', '15:20', '8:00', '8:30'); 
-insert into taken(offering_id, student_id) values (3, '2019CS1067'); 
-  
-CREATE TABLE program_elective_2021( 
-course_id varchar(20) not null, 
-department varchar(20) not null, 
-PRIMARY KEY(course_id)  
-); 
-insert into program_elective_2021(course_id, department) values    ('CS302','cse'); 
+set role student1;
+call raiseticket(1,4,4,1,3,1);
+reset role;
 
-CREATE TABLE program_core_elective_2021( 
-course_id varchar(20) not null, 
-department varchar(20) not null, 
-PRIMARY KEY(course_id)  
-); 
-insert into program_core_elective_2021(course_id, department) values    ('CS302','cse'); 
-
-CREATE TABLE science_core_elective_2021( 
-course_id varchar(20) not null, 
-department varchar(20) not null, 
-PRIMARY KEY(course_id)  
-); 
-insert into science_core_elective_2021(course_id, department) values    ('CS302','cse'); 
-
-CREATE TABLE open_elective_2021( 
-course_id varchar(20) not null, 
-department varchar(20) not null, 
-PRIMARY KEY(course_id)  
-); 
-insert into open_elective_2021(course_id, department) values    ('CS302','cse'); 
-
-insert into credit_requirement_to_graduate(batch,program_core_credit,science_core_credit,open_elective_credit,program_elective_credit) values(2019,1,1,1,1);
+call addUGCurriculum(2019,1); 
+call addCurriculumList(2019, 1, 'Program Core', 7);
+call addCurriculumRequirements(2019, 1, 10, 10, 10, 10, 7.50);
