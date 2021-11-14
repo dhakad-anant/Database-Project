@@ -1,0 +1,3 @@
+1. Only (DeansAcademicOffice & academicsection) can upload/edit the timeTable slot.
+
+2. CouseCatalogue can only be edited by DeansAcademicOffice.
